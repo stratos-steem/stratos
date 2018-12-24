@@ -1,0 +1,19 @@
+{
+  "name": "engine-platform",
+  "version": "1.0.0",
+  "description": "A platform for building apps on the Steem blockchain",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "steem",
+    "blockchain",
+    "steemit",
+    "cryptocurrency",
+    "dapp",
+    "decentralized"
+  ],
+  "author": "Nicholas C (nicholas2591@gmail.com)",
+  "license": "MIT"
+}
