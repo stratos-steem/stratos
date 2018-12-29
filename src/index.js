@@ -3,7 +3,8 @@ const steemState = require('steem-state');
 const steemTransact = require('steem-transact');
 const readline = require('readline');
 const fs = require('fs');
-const matcher = require('match-schema');
+var app = require('express')();
+const bodyParser = require('body-parser');
 
 const genesis = require('./genesis');
 const dex = require('./apps/dex');
@@ -40,6 +41,8 @@ const saveStateHistory = ('true' === process.env.SAVE_STATE_HISTORY)  // Whether
 const networkId = process.env.NETWORK_ID || '0' // Which network id to use? 0 is the mainnet, 1+ are testnets.
 console.log('Using network id', networkId)
 const fullPrefix = prefix + networkId + '_' // prefix + networkId = fullPrefix
+
+const port = process.env.PORT
 
 const username = process.env.ACCOUNT
 const key = process.env.KEY     // Above account's private posting key
@@ -102,6 +105,23 @@ function startApp(startingBlock) {
       console.log("Invalid command.");
     }
   });
+
+  app.use(bodyParser.json());
+
+  app.get('/', (req, res, next) => {
+    res.send(JSON.stringify({block: processor.getCurrentBlockNumber()}, null, 2))
+  });
+
+  app.get('/state', (req, res, next) => {
+    res.send(JSON.stringify(state, null, 2))
+  });
+
+  app = token.api(app, getState);
+  app = dex.api(app, getState);
+
+  app.listen(port, function() {
+    console.log(`Engine API listening on port ${port}!`)
+  })
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.

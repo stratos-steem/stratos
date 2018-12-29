@@ -18,8 +18,10 @@
   "author": "Nicholas C (nicholas2591@gmail.com)",
   "license": "MIT",
   "dependencies": {
+    "body-parser": "^1.18.3",
     "chai": "^4.2.0",
     "dsteem": "^0.11.2",
+    "express": "^4.16.4",
     "match-schema": "^0.1.0",
     "mocha": "^5.2.0",
     "steem-state": "^1.2.0",

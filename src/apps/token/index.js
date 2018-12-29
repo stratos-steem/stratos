@@ -24,7 +24,7 @@ function app(processor, getState, setState, prefix) {
   return processor
 }
 
-function cli(input, state) {
+function cli(input, getState) {
   input.on('token_send', function(args, transactor, username, key) {
     console.log('Sending tokens...')
     var to = args[0];
@@ -43,7 +43,7 @@ function cli(input, state) {
 
   input.on('balance', function(args) {
     const user = args[0];
-    const balance = state().balances[user];
+    const balance = getState().balances[user];
     if(balance === undefined) {
       balance = 0;
     }
@@ -51,7 +51,21 @@ function cli(input, state) {
   })
 }
 
+function api(app, getState) {
+
+  app.get('/token/balances', (req, res, next) => {
+    res.send(JSON.stringify(getState().balances, null, 2))
+  });
+
+  app.get('/token/@:username', (req, res, next) => {
+    res.send(JSON.stringify({balance: getState().balances[req.params.username]}, null, 2))
+  })
+
+  return app
+}
+
 module.exports = {
   app: app,
-  cli: cli
+  cli: cli,
+  api: api
 }

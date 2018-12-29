@@ -114,7 +114,20 @@ function cli(input, getState) {
   })
 }
 
+function api(app, getState) {
+  app.get('/dex/orders', (req, res, next) => {
+    res.send(JSON.stringify(getState().dex, null, 2))
+  })
+
+  app.get('/dex/@:username', (req, res, next) => {
+    res.send(JSON.stringify(getState().dex[req.params.username], null, 2))
+  })
+
+  return app
+}
+
 module.exports = {
   app: app,
-  cli: cli
+  cli: cli,
+  api: api
 }
