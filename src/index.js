@@ -5,6 +5,7 @@ const readline = require('readline');
 const fs = require('fs');
 const matcher = require('match-schema');
 
+const genesis = require('./genesis');
 const dex = require('./apps/dex');
 const token = require('./apps/token');
 
@@ -16,15 +17,8 @@ const rl = readline.createInterface({
 const stateStoreFile = __dirname + '/../state.json'
 const stateHistoryDirectory = __dirname + '/../states/'
 
-const genesisBlock = 28934806;
-var state = {
-  balances: {
-    shredz7: 9900000,
-    ausbitbank: 100000,
-    "state-tester": 1000000,
-    ra: 10000000
-  }
-}
+const genesisBlock = genesis.block;
+var state = genesis.state;
 
 function getState() {
   return state;
@@ -74,8 +68,8 @@ function startApp(startingBlock) {
     console.log("At real time.")
   });
 
-  processor = token.app(processor,getState,setState);
-  processor = dex.app(processor,getState,setState);
+  processor = token.app(processor,getState,setState, fullPrefix);
+  processor = dex.app(processor,getState,setState, fullPrefix);
 
   processor.start();
   console.log('Started state processor.');
@@ -108,37 +102,6 @@ function startApp(startingBlock) {
       console.log("Invalid command.");
     }
   });
-  /*
-  rl.on('line', function(data) {
-    const split = data.split(' ');
-
-    if(split[0] === 'balance') {
-      var user = split[1];
-      var balance = state.balances[user];
-      if(balance === undefined) {
-        balance = 0;
-      }
-      console.log(user, 'has', balance, 'tokens')
-    } else if(split[0] === 'state') {
-      console.log(JSON.stringify(state, null, 2));
-    } else if(split[0] === 'send') {
-      console.log('Sending tokens...')
-      var to = split[1];
-
-      var amount = parseInt(split[2]);
-
-      transactor.json(username, key, 'send', {
-        to: to,
-        amount: amount
-      }, function(err, result) {
-        if(err) {
-          console.error(err);
-        }
-      });
-    } else {
-      console.log("Invalid command.");
-    }
-  });*/
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.
@@ -149,7 +112,7 @@ function saveState(currentBlock, currentState) { // Saves the state along with t
     console.log('Saved state.');
   });
 
-  if(saveStateHistory) {
+  if(saveStateHistory && currentBlock % 10000 === 0) {
     try {
       fs.mkdirSync(stateHistoryDirectory)
     } catch (err) {

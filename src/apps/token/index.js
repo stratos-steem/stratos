@@ -1,11 +1,11 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
-function app(processor, getState, setState) {
+function app(processor, getState, setState, prefix) {
   processor.on('token_send', function(json, from) {
     var state = getState()
     const {matched, errorKey} = matcher.match(json, schemas.send);
-    if(matched && state.balances[from] && state.balances[from] > json.amount) {
+    if(matched && state.balances[from] && state.balances[from] > json.amount) { // Does it match the sell order transaction schema
       console.log('Send occurred from', from, 'to', json.to, 'of', json.amount, 'tokens.')
 
       if(state.balances[json.to] === undefined) {

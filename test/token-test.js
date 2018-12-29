@@ -15,13 +15,10 @@ describe('token', function() {
     state = value;
   }
 
-  before(function() {
-    //console.log = function() {}
-  })
 
   beforeEach(function () {
     processor = dummySteemState();
-    token.app(processor, getState, setState);
+    token.app(processor, getState, setState, 'test_prefix_');
   });
 
   it('Updates balances of user on token send', function() {
@@ -31,7 +28,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 'bob',
       amount: 20
     });
@@ -48,7 +45,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 'bob',
       amount: 55
     });
@@ -65,7 +62,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 'bob',
       amount: -10
     });
@@ -82,7 +79,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 'bob',
       amount: 12.42
     });
@@ -99,7 +96,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 'bob',
       amount: 'notanumber'
     });
@@ -116,7 +113,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 34,
       amount: 4
     });
@@ -133,7 +130,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {
+    processor.triggerCustomJson('token_send', 'alice', {
       to: 34,
       amount: 4
     });
@@ -150,7 +147,7 @@ describe('token', function() {
       }
     }
 
-    processor.triggerCustomJson('token-send', 'alice', {});
+    processor.triggerCustomJson('token_send', 'alice', {});
 
     expect(state.balances.alice).to.equal(50);
     expect(state.balances.bob).to.equal(100);
