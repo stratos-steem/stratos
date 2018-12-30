@@ -41,7 +41,7 @@ function cli(input, getState) {
     });
   });
 
-  input.on('balance', function(args) {
+  input.on('token_balance', function(args) {
     const user = args[0];
     const balance = getState().balances[user];
     if(balance === undefined) {
