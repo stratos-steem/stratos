@@ -42,7 +42,7 @@ const networkId = process.env.NETWORK_ID || '0' // Which network id to use? 0 is
 console.log('Using network id', networkId)
 const fullPrefix = prefix + networkId + '_' // prefix + networkId = fullPrefix
 
-const port = process.env.PORT
+const port = process.env.PORT || 3000
 
 const username = process.env.ACCOUNT
 const key = process.env.KEY     // Above account's private posting key
