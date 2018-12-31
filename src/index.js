@@ -109,7 +109,7 @@ function startApp(startingBlock) {
   app.use(bodyParser.json());
 
   app.get('/', (req, res, next) => {
-    res.send(JSON.stringify({block: processor.getCurrentBlockNumber()}, null, 2))
+    res.send(JSON.stringify({block: processor.getCurrentBlockNumber(), latest: processor.isStreaming()}, null, 2))
   });
 
   app.get('/state', (req, res, next) => {
