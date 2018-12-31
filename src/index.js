@@ -65,6 +65,10 @@ function startApp(startingBlock) {
     if(num % 100 === 0) {
       saveState(num, state)
     }
+
+    //if(num % 28800 === 0) { // Every day
+      distributeGrants();
+    //}
   });
 
   processor.onStreamingStart(function() {
@@ -113,7 +117,7 @@ function startApp(startingBlock) {
   });
 
   app.get('/state', (req, res, next) => {
-    res.send(JSON.stringify(state, null, 2))
+    res.send(JSON.stringify([processor.getCurrentBlockNumber(),state], null, 2))
   });
 
   app = token.api(app, getState);
@@ -157,4 +161,9 @@ if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous 
   console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
   const startingBlock = genesisBlock;  // Simply start at the genesis block.
   startApp(startingBlock);
+}
+
+
+function distributeGrants() {
+  console.log('distributing grants');
 }
