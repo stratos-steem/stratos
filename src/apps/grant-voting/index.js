@@ -72,6 +72,14 @@ function cli(input, getState) {
 }
 
 function api(app, getState) {
+  app.get('/grant-voting/granters', (req, res, next) => {
+    res.send(JSON.stringify(getState().granters, null, 2));
+  });
+
+  app.get('/grant-voting/@:username', (req, res, next) => {
+    res.send(JSON.stringify(getState().granterVotes[req.params.username], null, 2));
+  });
+
   return app
 }
 
