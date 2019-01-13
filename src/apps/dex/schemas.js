@@ -1,6 +1,6 @@
 const sell_order = {
   type: 'object',
-  engine: {
+  stratos: {
     type: 'number',
     requires: [
       'nonnegative',

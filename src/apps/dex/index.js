@@ -6,16 +6,16 @@ function app(processor, getState, setState, prefix) {
     var state = getState()
     const {matched,errorKey} = matcher.match(json, schemas.sell_order); // Does it match the sell order transaction schema
 
-    if(matched && state.balances[from] && state.balances[from] >= json.engine) {
-      console.log(from, 'created sell order selling', json.engine, 'milliENGN for', json.steem, 'milliSTEEM')
+    if(matched && state.balances[from] && state.balances[from] >= json.stratos) {
+      console.log(from, 'created sell order selling', json.stratos, 'milliSRTS for', json.steem, 'milliSTEEM')
       if(state.dex[from] === undefined) {
         state.dex[from] = []
       }
 
-      state.balances[from] -= json.engine;
+      state.balances[from] -= json.stratos;
 
       state.dex[from].push({
-        engine: json.engine,
+        stratos: json.stratos,
         steem: json.steem
       });
     } else {
@@ -31,7 +31,7 @@ function app(processor, getState, setState, prefix) {
 
     if(matched && state.dex[from] && state.dex[from][json.id]) {
       console.log(from, 'cancelled their sell order of id', json.id);
-      state.balances[from] += state.dex[from][json.id].engine;
+      state.balances[from] += state.dex[from][json.id].stratos;
       state.dex[from].splice(json.id, 1);
     } else {
       console.log('Invalid cancel sell order by', from, 'error at', errorKey);
@@ -53,13 +53,13 @@ function app(processor, getState, setState, prefix) {
 
       if(typeof orderId === 'number' && state.dex[json.to] && state.dex[json.to][orderId] && transferType === 'STEEM') {
         if(amount >= state.dex[json.to][orderId].steem) {
-          console.log(json.from, 'filled sell order from', json.to, 'and received', state.dex[json.to][orderId].engine, 'milliENGN at rate', state.dex[json.to][orderId].engine/state.dex[json.to][orderId].steem, 'ENGN/STEEM')
+          console.log(json.from, 'filled sell order from', json.to, 'and received', state.dex[json.to][orderId].stratos, 'milliSRTS at rate', state.dex[json.to][orderId].stratos/state.dex[json.to][orderId].steem, 'SRTS/STEEM')
 
           if(!state.balances[json.from]) {
             state.balances[json.from] = 0;
           }
 
-          state.balances[json.from] += state.dex[json.to][orderId].engine;
+          state.balances[json.from] += state.dex[json.to][orderId].stratos;
           state.dex[json.to].splice(orderId, 1);
         } else {
           console.log(json.from, 'tried to fill sell order with', json.to, 'but failed due to not providing enough payment.');
@@ -77,12 +77,12 @@ function app(processor, getState, setState, prefix) {
 
 function cli(input, getState) {
   input.on('dex_sell_order', function(args,transactor,username,key) {
-    const engineAmount = parseInt(args[0])
+    const stratosAmount = parseInt(args[0])
     const steemAmount = parseInt(args[1])
-    console.log('Creating sell order for', engineAmount, 'milliENGN to', steemAmount,'milliSTEEM...')
+    console.log('Creating sell order for', stratosAmount, 'milliSRTS to', steemAmount,'milliSTEEM...')
 
     transactor.json(username, key, 'dex_sell_order', {
-      engine: engineAmount,
+      stratos: stratosAmount,
       steem: steemAmount
     }, function(err, result) {
       if(err) {
@@ -108,7 +108,7 @@ function cli(input, getState) {
     const state = getState()
     for(username in state.dex) {
       for(i in state.dex[username]) {
-        console.log(i, ':', username, 'is selling', state.dex[username][i].engine, 'milliENGN for', state.dex[username][i].steem, 'milliSTEEM')
+        console.log(i, ':', username, 'is selling', state.dex[username][i].stratos, 'milliSRTS for', state.dex[username][i].steem, 'milliSTEEM')
       }
     }
   })

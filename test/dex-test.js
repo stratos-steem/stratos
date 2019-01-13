@@ -32,7 +32,7 @@ describe('dex', function() {
     }
 
     processor.triggerCustomJson('dex_sell_order', 'alice', {
-      engine: 10000,  // 10.000 actual ENGN
+      stratos: 10000,  // 10.000 actual SRTS
       steem: 100      // 0.100 actual STEEM
     });
 
@@ -61,7 +61,7 @@ describe('dex', function() {
     }
 
     processor.triggerCustomJson('dex_sell_order', 'alice', {
-      engine: 10000,  // 10.000 actual ENGN
+      stratos: 10000,  // 10.000 actual SRTS
       steem: 100      // 0.100 actual STEEM
     });
 
@@ -81,7 +81,7 @@ describe('dex', function() {
       dex: {
         alice: [
           {
-            engine: 1000,
+            stratos: 1000,
             steem: 1000
           }
         ]
