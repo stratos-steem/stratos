@@ -32,7 +32,7 @@ function setState(value) {
   state = value;
 }
 
-const prefix = 'engine_'
+const prefix = 'stratos_'
 
 const streamMode = process.env.STREAM_MODE || 'irreversible'  // Stream irreversible or latest?
 console.log('Using mode', streamMode)
@@ -129,7 +129,7 @@ function startApp(startingBlock) {
   app = grantVoting.api(app, getState);
 
   app.listen(port, function() {
-    console.log(`Engine API listening on port ${port}!`)
+    console.log(`stratos API listening on port ${port}!`)
   })
 }
 

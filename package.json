@@ -1,5 +1,5 @@
 {
-  "name": "engine-platform",
+  "name": "stratos",
   "version": "1.0.0",
   "description": "A platform for building apps on the Steem blockchain",
   "main": "src/index.js",
