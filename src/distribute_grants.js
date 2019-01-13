@@ -1,5 +1,5 @@
 
-const maxGranters = 11;
+const maxGranters = 3;
 
 function distributeGrants(state, block) {
   if(!state.rewardPool) {

@@ -1,7 +1,7 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
-const maxGrantersVote = 11;
+const maxGrantersVote = 3;
 
 function app(processor, getState, setState, prefix) {
   if(!getState().granters) {
