@@ -9,6 +9,9 @@ const bodyParser = require('body-parser');
 const genesis = require('./genesis');
 const dex = require('./apps/dex');
 const token = require('./apps/token');
+const grantVoting = require('./apps/grant-voting');
+
+const distributeGrants = require('./distribute_grants');
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -30,7 +33,6 @@ function setState(value) {
 }
 
 const prefix = 'engine_'
-const dappCreationFee = 1000;
 
 const streamMode = process.env.STREAM_MODE || 'irreversible'  // Stream irreversible or latest?
 console.log('Using mode', streamMode)
@@ -65,6 +67,10 @@ function startApp(startingBlock) {
     if(num % 100 === 0) {
       saveState(num, state)
     }
+    //if(num % 100 === 0) { // For grant distribution testing
+    if(num % 28800 === 0) { // Every day
+      state = distributeGrants(state, num);
+    }
   });
 
   processor.onStreamingStart(function() {
@@ -73,6 +79,7 @@ function startApp(startingBlock) {
 
   processor = token.app(processor,getState,setState, fullPrefix);
   processor = dex.app(processor,getState,setState, fullPrefix);
+  processor = grantVoting.app(processor, getState, setState, fullPrefix);
 
   processor.start();
   console.log('Started state processor.');
@@ -93,6 +100,7 @@ function startApp(startingBlock) {
 
   token.cli(inputInterface, getState);
   dex.cli(inputInterface, getState);
+  grantVoting.cli(inputInterface, getState);
 
 
   rl.on('line', function(data) {
@@ -109,15 +117,16 @@ function startApp(startingBlock) {
   app.use(bodyParser.json());
 
   app.get('/', (req, res, next) => {
-    res.send(JSON.stringify({block: processor.getCurrentBlockNumber()}, null, 2))
+    res.send(JSON.stringify({block: processor.getCurrentBlockNumber(), latest: processor.isStreaming()}, null, 2))
   });
 
   app.get('/state', (req, res, next) => {
-    res.send(JSON.stringify(state, null, 2))
+    res.send(JSON.stringify([processor.getCurrentBlockNumber(),state], null, 2))
   });
 
   app = token.api(app, getState);
   app = dex.api(app, getState);
+  app = grantVoting.api(app, getState);
 
   app.listen(port, function() {
     console.log(`Engine API listening on port ${port}!`)
