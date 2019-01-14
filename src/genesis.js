@@ -7,7 +7,8 @@ const genesisState = {
   dex: {},
   granters: {},
   rewardPool: 100000,
-  granterVotes: {}
+  granterVotes: {},
+  communities: {}
 };
 
 const genesisBlock = 28934806;

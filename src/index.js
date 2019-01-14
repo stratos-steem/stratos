@@ -12,6 +12,7 @@ const genesis = require('./genesis');
 const dex = require('./apps/dex');
 const token = require('./apps/token');
 const grantVoting = require('./apps/grant-voting');
+const communities = require('./apps/communities');
 
 const distributeGrants = require('./distribute_grants');
 
@@ -78,8 +79,7 @@ function startApp(startingBlock) {
 
     if(num % checkpointDelay === 0) {
       lastCheckpointHash = hash(state);
-      //if(processor.isStreaming && postCheckpoints) {
-      if(postConsensusCheck) {
+      if(processor.isStreaming() && postConsensusCheck) {
         console.log('Posting consensus check')
 
         transactor.json(username, key, 'consensus_check', lastCheckpointHash, function(err, result) {
@@ -114,6 +114,7 @@ function startApp(startingBlock) {
   processor = token.app(processor,getState,setState, fullPrefix);
   processor = dex.app(processor,getState,setState, fullPrefix);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
+  processor = communities.app(processor, getState, setState, fullPrefix);
 
   processor.start();
   console.log('Started state processor.');
@@ -133,6 +134,7 @@ function startApp(startingBlock) {
   token.cli(inputInterface, getState);
   dex.cli(inputInterface, getState);
   grantVoting.cli(inputInterface, getState);
+  communities.cli(inputInterface, getState);
 
 
   rl.on('line', function(data) {
@@ -159,6 +161,7 @@ function startApp(startingBlock) {
   app = token.api(app, getState);
   app = dex.api(app, getState);
   app = grantVoting.api(app, getState);
+  app = communities.api(app, getState);
 
   app.listen(port, function() {
     console.log(`stratos API listening on port ${port}!`)
