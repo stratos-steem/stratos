@@ -5,6 +5,8 @@ const readline = require('readline');
 const fs = require('fs');
 var app = require('express')();
 const bodyParser = require('body-parser');
+const hash = require('object-hash');
+
 
 const genesis = require('./genesis');
 const dex = require('./apps/dex');
@@ -23,6 +25,7 @@ const stateHistoryDirectory = __dirname + '/../states/'
 
 const genesisBlock = genesis.block;
 var state = genesis.state;
+var lastCheckpointHash = hash(state);
 
 function getState() {
   return state;
@@ -33,6 +36,9 @@ function setState(value) {
 }
 
 const prefix = 'stratos_'
+const checkpointDelay = 200; // Every 10 minutes
+
+const postConsensusCheck = process.env.CONSENSUS_CHECKS === 'true'
 
 const streamMode = process.env.STREAM_MODE || 'irreversible'  // Stream irreversible or latest?
 console.log('Using mode', streamMode)
@@ -56,6 +62,8 @@ console.log()
 function startApp(startingBlock) {
   var processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
 
+  const transactor = steemTransact(client, steem, fullPrefix);
+
   processor.onBlock(function(num, block) {
     if(num % 100 === 0 && !processor.isStreaming()) { // Print out data to user about how far until real-time
       client.database.getDynamicGlobalProperties().then(function(result) {
@@ -67,9 +75,35 @@ function startApp(startingBlock) {
     if(num % 100 === 0) {
       saveState(num, state)
     }
+
+    if(num % checkpointDelay === 0) {
+      lastCheckpointHash = hash(state);
+      //if(processor.isStreaming && postCheckpoints) {
+      if(postConsensusCheck) {
+        console.log('Posting consensus check')
+
+        transactor.json(username, key, 'consensus_check', lastCheckpointHash, function(err, result) {
+          if(err) {
+            console.error(err);
+          }
+        });
+      }
+    }
     //if(num % 100 === 0) { // For grant distribution testing
     if(num % 28800 === 0) { // Every day
       state = distributeGrants(state, num);
+    }
+  });
+
+  processor.on('consensus_check', function(json, from) {
+    if(typeof json === typeof 'thisisastring') {
+      if(json === lastCheckpointHash) {
+        console.log('In agreement with', from);
+      } else {
+        console.error('Disagreed with', from);
+      }
+    } else {
+      console.log('Invalid consensus check by', from)
     }
   });
 
@@ -83,8 +117,6 @@ function startApp(startingBlock) {
 
   processor.start();
   console.log('Started state processor.');
-
-  const transactor = steemTransact(client, steem, fullPrefix);
 
   var inputToFunction = {}    // An input action cooresponds to a function
 
@@ -134,7 +166,7 @@ function startApp(startingBlock) {
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.
-  const data = JSON.stringify([currentBlock, currentState])
+  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState])
 
   fs.writeFile(stateStoreFile, data, (err) => {
     if (err) throw err;
@@ -160,7 +192,8 @@ if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous 
   const data = fs.readFileSync(stateStoreFile, 'utf8');
   const json = JSON.parse(data);
   const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
-  state = json[1]; // The state will be set to the one linked to the starting block.
+  state = json[2]; // The state will be set to the one linked to the starting block.
+  lastCheckpointHash = json[1];
   startApp(startingBlock);
 } else {   // If this is the first run
   console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
