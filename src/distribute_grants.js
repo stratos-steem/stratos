@@ -45,20 +45,20 @@ function distributeGrants(state, block) {
   const topGranters = sortedGranters.slice(0, maxGranters);
 
   // Distribute rewards
-  const rewardPerGranter = Math.floor(state.rewardPool/topGranters.length);
+  if(topGranters.length !== 0) {
+    const rewardPerGranter = Math.floor(state.rewardPool/topGranters.length);
 
-  for(granterNum in topGranters) {
-    const granter = topGranters[granterNum].granter;
-    console.log("Top granter",granter,"received",rewardPerGranter);
+    for(granterNum in topGranters) {
+      const granter = topGranters[granterNum].granter;
+      console.log("Top granter",granter,"received",rewardPerGranter);
 
-    if(state.balances[granter] === undefined) {
-      state.balances[granter] = 0;
+      if(state.balances[granter] === undefined) {
+        state.balances[granter] = 0;
+      }
+
+      state.balances[granter] += rewardPerGranter;
     }
-
-    state.balances[granter] += rewardPerGranter;
   }
-
-
 
   state.rewardPool = getRewardPool(block);
   return state;
