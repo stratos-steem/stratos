@@ -27,6 +27,7 @@ const stateHistoryDirectory = __dirname + '/../states/'
 const genesisBlock = genesis.block;
 var state = genesis.state;
 var lastCheckpointHash = hash(state);
+var consensusDisagreements = {} // Counts disagreements on checkpoint states
 
 function getState() {
   return state;
@@ -100,7 +101,9 @@ function startApp(startingBlock) {
       if(json === lastCheckpointHash) {
         console.log('In agreement with', from);
       } else {
-        console.error('Disagreed with', from);
+        console.error('\x1b[31mDisagreed with', from, '\x1b[0m');
+        if(!consensusDisagreements[from]) consensusDisagreements[from] = 0;
+        consensusDisagreements[from]++;
       }
     } else {
       console.log('Invalid consensus check by', from)
@@ -131,6 +134,12 @@ function startApp(startingBlock) {
     console.log(JSON.stringify(state, null, 2));
   });
 
+  inputInterface.on('consensus', function() {
+    for(user in consensusDisagreements) {
+      console.log(user, 'had', consensusDisagreements[user], 'disagreements');
+    }
+  });
+
   token.cli(inputInterface, getState);
   dex.cli(inputInterface, getState);
   grantVoting.cli(inputInterface, getState);
@@ -158,6 +167,10 @@ function startApp(startingBlock) {
     res.send(JSON.stringify([processor.getCurrentBlockNumber(),state], null, 2))
   });
 
+  app.get('/consensus', (req, res, next) => {
+    res.send(JSON.stringify(consensusDisagreements, null, 2))
+  });
+
   app = token.api(app, getState);
   app = dex.api(app, getState);
   app = grantVoting.api(app, getState);
@@ -169,7 +182,7 @@ function startApp(startingBlock) {
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.
-  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState])
+  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState, consensusDisagreements])
 
   fs.writeFile(stateStoreFile, data, (err) => {
     if (err) throw err;
@@ -197,6 +210,7 @@ if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous 
   const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
   state = json[2]; // The state will be set to the one linked to the starting block.
   lastCheckpointHash = json[1];
+  consensusDisagreements = json[3];
   startApp(startingBlock);
 } else {   // If this is the first run
   console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
