@@ -1,7 +1,7 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
-function hasRole(state, user, community, role) { // Roles 'owner', 'admin', 'moderator', 'author'
+function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 'moderator', 'author'
   try {
     const roles = state.communities[community].roles
 
@@ -19,7 +19,7 @@ function hasRole(state, user, community, role) { // Roles 'owner', 'admin', 'mod
       } else {
         return false;
       }
-    } else {
+    } else if(roles.author.indexOf(user) !== -1){
       return false;
     }
   } catch(err) {
@@ -28,7 +28,7 @@ function hasRole(state, user, community, role) { // Roles 'owner', 'admin', 'mod
 }
 
 function app(processor, getState, setState, prefix) {
-  processor.on('communities_create', function(json, from) {
+  processor.on('cmmts_create', function(json, from) {
     var state = getState()
     const {matched, errorKey} = matcher.match(json, schemas.createCommunity);
     if(matched && state.communities[json.id] === undefined) {
@@ -53,12 +53,12 @@ function app(processor, getState, setState, prefix) {
     setState(state)
   });
 
-  processor.on('communities_grant_role', function(json, from) {
+  processor.on('cmmts_grant_role', function(json, from) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.grantRole);
-    if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author')) {
+    if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) === -1) {
       // Check authorization
-      if(hasRole(state, from, json.community, json.role)) {
+      if(canEditRole(state, from, json.community, json.role)) {
         console.log(from, 'granted role', json.role, 'to', json.receiver);
         state.communities[json.community].roles[json.role].push(json.receiver)
       } else {
@@ -71,6 +71,25 @@ function app(processor, getState, setState, prefix) {
     setState(state);
   });
 
+  processor.on('cmmts_remove_role', function(json, from) {
+    var state = getState();
+    const {matched, errorKey} = matcher.match(json, schemas.removeRole);
+    if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) > -1) {
+      // Check authorization
+      if(canEditRole(state, from, json.community, json.role)) {
+        console.log(from, 'removed role', json.role, 'from', json.receiver);
+        const roleIndex = state.communities[json.community].roles[json.role].indexOf(json.receiver);
+        state.communities[json.community].roles[json.role].splice(roleIndex, 1);
+      } else {
+        console.log(from, 'tried to remove role but lacked proper permissions.')
+      }
+    } else {
+      console.log('Invalid role removal from', from)
+    }
+
+    setState(state);
+  });
+
   return processor;
 }
 
@@ -78,7 +97,7 @@ function cli(input, getState) {
   input.on('communities_create', function(args, transactor, username, key) {
     const id = args[0];
 
-    transactor.json(username, key, 'communities_create', {
+    transactor.json(username, key, 'cmmts_create', {
       id: id
     }, function(err, result) {
       if(err) {
@@ -92,7 +111,23 @@ function cli(input, getState) {
     const receiver = args[1];
     const community = args[2];
 
-    transactor.json(username, key, 'communities_grant_role', {
+    transactor.json(username, key, 'cmmts_grant_role', {
+      community: community,
+      receiver: receiver,
+      role: role
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_remove_role', function(args, transactor, username, key) {
+    const role = args[0];
+    const receiver = args[1];
+    const community = args[2];
+
+    transactor.json(username, key, 'cmmts_remove_role', {
       community: community,
       receiver: receiver,
       role: role

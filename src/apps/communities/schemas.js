@@ -1,8 +1,10 @@
+const communityIdAlphabet = 'abcdefghijklmnopqrstuvwxyz-';
+
 const createCommunity = {
   type: 'object',
   id: {
     type: 'string',
-    alphabet: 'abcdefghijklmnopqrstuvwxyz-'
+    alphabet: communityIdAlphabet
   }
 }
 
@@ -10,7 +12,21 @@ const grantRole = {
   type: 'object',
   community: {
     type: 'string',
-    alphabet: 'abcdefghijklmnopqrstuvwxyz-'
+    alphabet: communityIdAlphabet
+  },
+  receiver: {
+    type: 'string'
+  },
+  role: {
+    type: 'string'
+  }
+}
+
+const removeRole = {
+  type: 'object',
+  community: {
+    type: 'string',
+    alphabet: communityIdAlphabet
   },
   receiver: {
     type: 'string'
@@ -22,5 +38,6 @@ const grantRole = {
 
 module.exports = {
   createCommunity: createCommunity,
-  grantRole: grantRole
+  grantRole: grantRole,
+  removeRole: removeRole
 }

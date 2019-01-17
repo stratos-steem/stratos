@@ -26,7 +26,7 @@ describe('communities', function() {
       communities: {}
     }
 
-    processor.triggerCustomJson('communities_create', 'alice', {
+    processor.triggerCustomJson('cmmts_create', 'alice', {
       id: 'test-community'
     })
 
@@ -38,7 +38,7 @@ describe('communities', function() {
       communities: {}
     }
 
-    processor.triggerCustomJson('communities_create', 'alice', {
+    processor.triggerCustomJson('cmmts_create', 'alice', {
       id: 'invalID iD #$@QE@#!_'
     })
 
@@ -59,7 +59,7 @@ describe('communities', function() {
       }
     }
 
-    processor.triggerCustomJson('communities_grant_role', 'alice', {
+    processor.triggerCustomJson('cmmts_grant_role', 'alice', {
       community: 'test',
       receiver: 'bob',
       role: 'admin'
@@ -67,7 +67,7 @@ describe('communities', function() {
 
     expect(state.communities.test.roles.admin[0]).to.eql('bob');
 
-    processor.triggerCustomJson('communities_grant_role', 'bob', {
+    processor.triggerCustomJson('cmmts_grant_role', 'bob', {
       community: 'test',
       receiver: 'carl',
       role: 'mod'
@@ -75,7 +75,7 @@ describe('communities', function() {
 
     expect(state.communities.test.roles.mod[0]).to.eql('carl');
 
-    processor.triggerCustomJson('communities_grant_role', 'carl', {
+    processor.triggerCustomJson('cmmts_grant_role', 'carl', {
       community: 'test',
       receiver: 'dan',
       role: 'author'
@@ -89,18 +89,44 @@ describe('communities', function() {
       communities: {
         test: {
           roles: {
-            mod: ['alice']
+            mod: ['alice'],
+            admin: [],
+            owner: [],
+            author: []
           }
         }
       }
     };
 
-    processor.triggerCustomJson('communities_grant_role', 'alice', {
+    processor.triggerCustomJson('cmmts_grant_role', 'alice', {
       community: 'test',
       receiver: 'bob',
       role: 'admin'
     });
 
-    expect(state.communities.test.roles.admin).to.equal(undefined);
-  })
+    expect(state.communities.test.roles.admin.length).to.equal(0);
+  });
+
+  it('Removes roles', function() {
+    state = {
+      communities: {
+        test: {
+          roles: {
+            admin: [],
+            owner: [],
+            mod: ['alice'],
+            author: ['bob']
+          }
+        }
+      }
+    };
+
+    processor.triggerCustomJson('cmmts_remove_role', 'alice', {
+      community: 'test',
+      receiver: 'bob',
+      role: 'author'
+    });
+
+    expect(state.communities.test.roles.author.length).to.equal(0);
+  });
 });
