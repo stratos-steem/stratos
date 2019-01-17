@@ -44,7 +44,7 @@ const postConsensusCheck = process.env.CONSENSUS_CHECKS === 'true'
 
 const streamMode = process.env.STREAM_MODE || 'irreversible'  // Stream irreversible or latest?
 console.log('Using mode', streamMode)
-const rpcEndpoint = process.env.RPC_ENDPOINT || 'https://api.steemit.com'   // Use which client?
+const rpcEndpoint = process.env.RPC_ENDPOINT || 'https://rpc.usesteem.com'   // Use which client?
 console.log('Using endpoint', rpcEndpoint)
 const saveStateHistory = ('true' === process.env.SAVE_STATE_HISTORY)  // Whether to store a record of the history of the state; if true saves state every 100 blocks into states/ directory
                                                                       // Converts save_state_history to true/false
