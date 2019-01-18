@@ -27,6 +27,16 @@ function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 
   }
 }
 
+function canPost(state, user, community) {
+  for(i in ['owner', 'admin', 'mod', 'author']) {
+    const role = ['owner', 'admin', 'mod', 'author'][i];
+    const roles = state.communities[community].roles;
+    if(roles[role].indexOf(user) !== -1) {
+      return true;
+    }
+  }
+}
+
 function app(processor, getState, setState, prefix) {
   processor.on('cmmts_create', function(json, from) {
     var state = getState()
@@ -90,6 +100,27 @@ function app(processor, getState, setState, prefix) {
     setState(state);
   });
 
+  processor.onOperation('comment', function(json) {
+    var state = getState();
+    if(json.parent_author === '' && json.json_metadata) {
+      let meta = {}
+      try {
+        meta = JSON.parse(json.json_metadata);
+      } catch(err) {
+        meta = {}
+      }
+      const community = meta[prefix+'cmmts_post']
+
+      if(community) {
+        if(state.communities[community] && canPost(state, json.author, community)) {
+          console.log('post')
+          // Actual post behaviour here
+        }
+      }
+    }
+    setState(state);
+  });
+
   return processor;
 }
 
@@ -136,6 +167,29 @@ function cli(input, getState) {
         console.error(err);
       }
     });
+  });
+
+  input.on('communities_post', function(args, transactor, username, key, client, dsteem) {
+
+    client.broadcast
+      .comment(
+        {
+            author: username,
+            body: 'Test post',
+            json_metadata: args.slice(1).join(' '),
+            parent_author: '',
+            parent_permlink: 'test',
+            permlink: 'testing-testing-1-2-3' + args[0],
+            title: 'Test title',
+        },
+        dsteem.PrivateKey.fromString(key)
+    )
+    .then(
+        function(result) {},
+        function(error) {
+            console.error(error);
+        }
+    );
   });
 }
 
