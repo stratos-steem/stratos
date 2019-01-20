@@ -1,5 +1,6 @@
 states/
 state.json
+db/
 
 # Above this line was added for the Engine project, below is from gitignore.io
 

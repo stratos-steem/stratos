@@ -143,7 +143,7 @@ function startApp(startingBlock) {
   token.cli(inputInterface, getState);
   dex.cli(inputInterface, getState);
   grantVoting.cli(inputInterface, getState);
-  communities.cli(inputInterface, getState);
+  communities.cli(inputInterface, getState, fullPrefix);
 
 
   rl.on('line', function(data) {
@@ -174,7 +174,7 @@ function startApp(startingBlock) {
   app = token.api(app, getState);
   app = dex.api(app, getState);
   app = grantVoting.api(app, getState);
-  app = communities.api(app, getState);
+  app = communities.api(app, getState, fullPrefix);
 
   app.listen(port, function() {
     console.log(`stratos API listening on port ${port}!`)
@@ -211,7 +211,7 @@ if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous 
   state = json[2]; // The state will be set to the one linked to the starting block.
   lastCheckpointHash = json[1];
   consensusDisagreements = json[3];
-  startApp(startingBlock);
+  startApp(startingBlock)
 } else {   // If this is the first run
   console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
   const startingBlock = genesisBlock;  // Simply start at the genesis block.

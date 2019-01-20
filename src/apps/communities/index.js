@@ -1,6 +1,8 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
+const database = require('./database');
+
 function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 'moderator', 'author'
   try {
     const roles = state.communities[community].roles
@@ -114,7 +116,6 @@ function app(processor, getState, setState, prefix) {
       if(community) {
         if(state.communities[community] && canPost(state, json.author, community)) {
           console.log('post')
-          // Actual post behaviour here
         }
       }
     }
@@ -124,7 +125,7 @@ function app(processor, getState, setState, prefix) {
   return processor;
 }
 
-function cli(input, getState) {
+function cli(input, getState, prefix) {
   input.on('communities_create', function(args, transactor, username, key) {
     const id = args[0];
 
@@ -176,11 +177,11 @@ function cli(input, getState) {
         {
             author: username,
             body: 'Test post',
-            json_metadata: args.slice(1).join(' '),
+            json_metadata: '{"' + prefix + 'cmmts_post":"' + args[1] + '"}',
             parent_author: '',
             parent_permlink: 'test',
             permlink: 'testing-testing-1-2-3' + args[0],
-            title: 'Test title',
+            title: 'Test post'
         },
         dsteem.PrivateKey.fromString(key)
     )
