@@ -66,7 +66,7 @@ function distributeGrants(state, block) {
 
 // Placeholder reward pool function. Actual function TBD.
 function getRewardPool(block) {
-  return dailyRewardDistribution = 100000;
+  return 0;
 }
 
 
