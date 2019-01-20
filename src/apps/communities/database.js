@@ -1,7 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 
-const newStorageLimit = 4;  // How many posts maximum to store in the 'new' category.
+const newStorageLimit = 1000;  // How many posts maximum to store in the 'new' category.
                             // Posts older than this limit will be deleted in clearOldPosts() as long as they are >7 days old.
 
 const dbLocation = 'db/communities.db';
