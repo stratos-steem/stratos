@@ -1,3 +1,10 @@
+/*
+  Communities
+  ---
+
+  Implementation of Steem communities, which are similar to subreddits on Reddit.
+*/
+
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 

@@ -1,3 +1,11 @@
+/*
+  Grant voting
+  ---
+
+  Allows voting for granters. See src/distribute_grants.js
+
+*/
+
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 

@@ -1,3 +1,12 @@
+/*
+  Grant Distribution
+  ---
+
+  Implementation of Stratos grant distribution, as seen in Steem post
+  https://steemit.com/steem/@shredz7/a-model-for-a-decentralized-open-company-stratos-update
+
+  
+*/
 
 const maxGranters = 3;
 

@@ -1,3 +1,14 @@
+/*
+  Communities DB
+  ---
+
+  This stores communities data in a database. This data is all data that is not
+  required for future consensus. For example, there is no need to know a community's
+  posts to be able to determine what posts will be accepted in the future. But end
+  users will most definitely want to know a community's posts. So we store this data
+  in a local database, SQLite3.
+*/
+
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 

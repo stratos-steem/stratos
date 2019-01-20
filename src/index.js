@@ -1,3 +1,11 @@
+/*
+  Index.js
+  ---
+
+  Sets up state storage in memory and in files, runs distribute_grants, sets
+  up APIs, CLI, and operation events by utilizing files in src/apps/
+*/
+
 const steem = require('dsteem');
 const steemState = require('steem-state');
 const steemTransact = require('steem-transact');
