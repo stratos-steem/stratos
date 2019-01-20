@@ -1,4 +1,4 @@
-const communityIdAlphabet = 'abcdefghijklmnopqrstuvwxyz-';
+const communityIdAlphabet = 'abcdefghijklmnopqrstuvwxyz';
 
 const createCommunity = {
   type: 'object',

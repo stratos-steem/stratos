@@ -58,6 +58,8 @@ function app(processor, getState, setState, prefix) {
         }
       }
 
+      database.create(json.id);
+
       console.log(from, 'created community', json.id);
     } else {
       console.log('Invalid community creation from', from)
@@ -115,7 +117,7 @@ function app(processor, getState, setState, prefix) {
 
       if(community) {
         if(state.communities[community] && canPost(state, json.author, community)) {
-          console.log('post')
+          database.post(community, processor.getCurrentBlockNumber(), json.author, json.permlink);
         }
       }
     }
@@ -180,7 +182,7 @@ function cli(input, getState, prefix) {
             json_metadata: '{"' + prefix + 'cmmts_post":"' + args[1] + '"}',
             parent_author: '',
             parent_permlink: 'test',
-            permlink: 'testing-testing-1-2-3' + args[0],
+            permlink: 'test-' + args[0],
             title: 'Test post'
         },
         dsteem.PrivateKey.fromString(key)
@@ -195,6 +197,21 @@ function cli(input, getState, prefix) {
 }
 
 function api(app, getState) {
+  app.get('/communities/:community/new', (req, res, next) => {
+    let limit = 200;
+
+    const queryLimit = parseInt(req.query.limit);
+
+    // Querier can supply limit as long as is not unreasonable
+    if(queryLimit && queryLimit > 0 && queryLimit <= 1000) {
+      limit = queryLimit
+    }
+
+    database.getNew(req.params.community, limit, function(rows) {
+      res.send(JSON.stringify(rows, null, 2));
+    });
+  })
+
   return app;
 }
 
