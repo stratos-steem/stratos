@@ -12,10 +12,8 @@
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 
-const newStorageLimit = 1000;  // How many posts maximum to store in the 'new' category.
-                            // Posts older than this limit will be deleted in clearOldPosts() as long as they are >7 days old.
-
 const dbLocation = 'db/communities.db';
+
 
 if(!fs.existsSync(dbLocation)) {
   if(!fs.existsSync('db/')) {
@@ -27,32 +25,32 @@ if(!fs.existsSync(dbLocation)) {
 
 const db = new sqlite3.Database(dbLocation);
 
-// Removes old posts >7 days old from new in community DB, keeping newStorageLimit posts at the end.
-function clearOldPosts(community, currentBlock) {
-   const query = 'DELETE FROM ' + community + ' WHERE (SELECT max(rowid) FROM '+ community + ') - ' + newStorageLimit + ' > rowid AND block < ' + (currentBlock - 20160);
+db.run('CREATE TABLE IF NOT EXISTS new_posts(community, block, author, permlink)', function(err) {
+  if(err) {
+    throw err
+  }
+});
 
-   db.run(query, [], function(err) {
-     if(err) {
-       throw err;
-     }
-   });
-}
+db.run('CREATE TABLE IF NOT EXISTS featured_posts(community, block, author, featurer, permlink)', function(err) {
+  if(err) {
+    throw err
+  }
+});
 
 module.exports = {
   post: function(community, block, author, permlink) {
     // Insert value and at the same time remove all val
-    const query = 'INSERT INTO ' + community + '(block, author, permlink) VALUES (?,?,?);';
-    db.run(query, [block, author, permlink], function(err){
+    const query = 'INSERT INTO new_posts(community, block, author, permlink) VALUES(?,?,?,?)'
+    db.run(query, [community, block, author, permlink], function(err){
       if(err) {
         throw err
       }
     });
-
-    clearOldPosts(community, block);
   },
 
-  create: function(community) {
-    db.run('CREATE TABLE IF NOT EXISTS ' + community + '(block, author, permlink)', function(err){
+  feature: function(community, block, author, featurer, permlink) {
+    const query = 'INSERT INTO featured_posts(community, block, author, featurer, permlink) VALUES(?,?,?,?,?)'
+    db.run(query, [community, block, author, featurer, permlink], function(err){
       if(err) {
         throw err
       }
@@ -60,14 +58,40 @@ module.exports = {
   },
 
   getNew: function(community, limit, callback) {
-    const query = 'SELECT DISTINCT rowid, author, permlink, block FROM ' + community + ' ORDER BY block DESC LIMIT ' + limit;
+    const query = 'SELECT DISTINCT * FROM new_posts WHERE community=? ORDER BY block DESC LIMIT ?';
 
-    db.all(query, [], function(err, rows) {
+    db.all(query, [community, limit], function(err, rows) {
       if(err) {
         throw err
       }
 
       callback(rows);
     });
+  },
+
+  getFeatured: function(community, limit, callback) {
+    const query = 'SELECT DISTINCT * FROM featured_posts WHERE community=? ORDER BY block DESC LIMIT ?';
+
+    db.all(query, [community, limit], function(err, rows) {
+      if(err) {
+        throw err
+      }
+
+      callback(rows);
+    });
+  },
+
+  block: function(community, author, permlink) {
+    const query1 = 'DELETE FROM new_posts WHERE author = ? AND permlink = ? AND community = ?;'
+
+    db.run(query1, [author, permlink, community], function(err) {
+      if(err) {throw err}
+    })
+
+    const query2 = 'DELETE FROM featured_posts WHERE author = ? AND permlink = ? AND community = ?;'
+
+    db.run(query2, [author, permlink, community], function(err) {
+      if(err) {throw err}
+    })
   }
 }

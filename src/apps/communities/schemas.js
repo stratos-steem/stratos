@@ -36,8 +36,40 @@ const removeRole = {
   }
 }
 
+const blockPost = {
+  type: 'object',
+
+  permlink: {
+    type: 'string'
+  },
+  author: {
+    type: 'string'
+  },
+  community: {
+    type: 'string',
+    alphabet: communityIdAlphabet
+  }
+}
+
+const featurePost = {
+  type: 'object',
+
+  permlink: {
+    type: 'string'
+  },
+  author: {
+    type: 'string'
+  },
+  community: {
+    type: 'string',
+    alphabet: communityIdAlphabet
+  }
+}
+
 module.exports = {
   createCommunity: createCommunity,
   grantRole: grantRole,
-  removeRole: removeRole
+  removeRole: removeRole,
+  blockPost: blockPost,
+  featurePost: featurePost
 }

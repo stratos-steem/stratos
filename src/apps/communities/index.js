@@ -111,6 +111,28 @@ function app(processor, getState, setState, prefix) {
     setState(state);
   });
 
+  processor.on('cmmts_block_post', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.blockPost);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        database.block(json.community, json.author, json.permlink);
+      }
+    }
+  });
+
+  processor.on('cmmts_feature', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.featurePost);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        database.feature(json.community, processor.getCurrentBlockNumber(), json.author, from, json.permlink);
+      }
+    }
+  });
+
   processor.onOperation('comment', function(json) {
     var state = getState();
     if(json.parent_author === '' && json.json_metadata) {
@@ -189,7 +211,7 @@ function cli(input, getState, prefix) {
             json_metadata: '{"' + prefix + 'cmmts_post":"' + args[1] + '"}',
             parent_author: '',
             parent_permlink: 'test',
-            permlink: 'test-' + args[0],
+            permlink: args[0],
             title: 'Test post'
         },
         dsteem.PrivateKey.fromString(key)
@@ -200,6 +222,38 @@ function cli(input, getState, prefix) {
             console.error(error);
         }
     );
+  });
+
+  input.on('communities_block_post', function(args, transactor, username, key, client, dsteem) {
+    const permlink = args[0];
+    const author = args[1];
+    const community = args[2];
+
+    transactor.json(username, key, 'cmmts_block_post', {
+      permlink: permlink,
+      author: author,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_feature', function(args, transactor, username, key, client, dsteem) {
+    const permlink = args[0];
+    const author = args[1];
+    const community = args[2];
+
+    transactor.json(username, key, 'cmmts_feature', {
+      permlink: permlink,
+      author: author,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
   });
 }
 
@@ -215,6 +269,21 @@ function api(app, getState) {
     }
 
     database.getNew(req.params.community, limit, function(rows) {
+      res.send(JSON.stringify(rows, null, 2));
+    });
+  })
+
+  app.get('/communities/:community/featured', (req, res, next) => {
+    let limit = 200;
+
+    const queryLimit = parseInt(req.query.limit);
+
+    // Querier can supply limit as long as is not unreasonable
+    if(queryLimit && queryLimit > 0 && queryLimit <= 1000) {
+      limit = queryLimit
+    }
+
+    database.getFeatured(req.params.community, limit, function(rows) {
       res.send(JSON.stringify(rows, null, 2));
     });
   })
