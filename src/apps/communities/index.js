@@ -65,8 +65,6 @@ function app(processor, getState, setState, prefix) {
         }
       }
 
-      database.create(json.id);
-
       console.log(from, 'created community', json.id);
     } else {
       console.log('Invalid community creation from', from)
