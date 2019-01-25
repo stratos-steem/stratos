@@ -37,6 +37,12 @@ db.run('CREATE TABLE IF NOT EXISTS featured_posts(community, block, author, feat
   }
 });
 
+db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata)', function(err) {
+  if(err) {
+    throw err
+  }
+});
+
 module.exports = {
   post: function(community, block, author, permlink) {
     // Insert value and at the same time remove all val
@@ -93,5 +99,33 @@ module.exports = {
     db.run(query2, [author, permlink, community], function(err) {
       if(err) {throw err}
     })
+  },
+
+  create: function(community) {
+    const query = 'INSERT INTO community_meta(community, metadata) VALUES (?,?)'
+
+    db.run(query, [community, '{}'], function(err) {
+      if(err) {throw err}
+    })
+  },
+
+  updateMeta: function(community, metadata) {
+    const query = 'UPDATE community_meta SET metadata=? WHERE community=?'
+
+    db.run(query, [metadata, community], function(err) {
+      if(err) {throw err}
+    })
+  },
+
+  getMeta: function(community, callback) {
+    const query = 'SELECT DISTINCT * FROM community_meta WHERE community = ? LIMIT 1'
+
+    db.all(query, [community], function(err, rows) {
+      if(err) {
+        throw err
+      }
+
+      callback(rows[0].metadata);
+    });
   }
 }

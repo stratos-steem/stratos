@@ -66,10 +66,19 @@ const featurePost = {
   }
 }
 
+const updateMeta = {
+  type: 'object',
+
+  metadata: {
+    type: 'string'
+  }
+}
+
 module.exports = {
   createCommunity: createCommunity,
   grantRole: grantRole,
   removeRole: removeRole,
   blockPost: blockPost,
-  featurePost: featurePost
+  featurePost: featurePost,
+  updateMeta: updateMeta
 }

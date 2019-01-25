@@ -65,6 +65,8 @@ function app(processor, getState, setState, prefix) {
         }
       }
 
+      database.create(json.id);
+
       console.log(from, 'created community', json.id);
     } else {
       console.log('Invalid community creation from', from)
@@ -127,6 +129,17 @@ function app(processor, getState, setState, prefix) {
     if(matched && state.communities[json.community] !== undefined) {
       if(canEditRole(state, from, json.community, 'mod')) {
         database.feature(json.community, processor.getCurrentBlockNumber(), json.author, from, json.permlink);
+      }
+    }
+  });
+
+  processor.on('cmmts_update_meta', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.updateMeta);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'admin')) {
+        database.updateMeta(json.community, json.metadata);
       }
     }
   });
@@ -253,6 +266,20 @@ function cli(input, getState, prefix) {
       }
     });
   });
+
+  input.on('communities_update_meta', function(args, transactor, username, key, client, dsteem) {
+    const community = args[0];
+    const metadata = args.slice(1).join(' ');
+
+    transactor.json(username, key, 'cmmts_update_meta', {
+      community: community,
+      metadata: metadata
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
 }
 
 function api(app, getState) {
@@ -286,13 +313,22 @@ function api(app, getState) {
     });
   })
 
-  app.get('/communities/:community/roles', (req, res, next) => {
+  app.get('/communities/:community', (req, res, next) => {
+    database.getMeta(req.params.community, function(metadata) {
+      res.send(JSON.stringify({
+        metadata: metadata,
+        roles: getState().communities[req.params.community].roles
+      }, null, 2));
+    });
+  });
+
+  /*app.get('/communities/:community/roles', (req, res, next) => {
     try {
       res.send(JSON.stringify(getState().communities[req.params.community].roles, null, 2));
     } catch (err) {
       res.send({})
     }
-  });
+  });*/
 
   return app;
 }
