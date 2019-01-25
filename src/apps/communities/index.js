@@ -322,13 +322,11 @@ function api(app, getState) {
     });
   });
 
-  /*app.get('/communities/:community/roles', (req, res, next) => {
-    try {
-      res.send(JSON.stringify(getState().communities[req.params.community].roles, null, 2));
-    } catch (err) {
-      res.send({})
-    }
-  });*/
+  app.get('/communities/@:author/:permlink/community', (req, res, next) => {
+    database.getCommunityOfPost(req.params.author, req.params.permlink, function(response) {
+      res.send(JSON.stringify(response, null, 2));
+    });
+  });
 
   return app;
 }

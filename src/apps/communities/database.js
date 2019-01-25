@@ -127,5 +127,37 @@ module.exports = {
 
       callback(rows[0].metadata);
     });
+  },
+
+  getCommunityOfPost: function(author, permlink, callback) {
+    const query = 'SELECT DISTINCT * FROM new_posts WHERE author = ? AND permlink = ?'
+
+    db.all(query, [author, permlink], function(err, rows1) {
+      if(err) {
+        throw err
+      }
+
+      if(rows1.length > 0) {
+        const community = rows1[0].community
+        // If it has a community see if it is featured
+        const query2 = 'SELECT DISTINCT * FROM featured_posts WHERE author = ? AND permlink = ? AND community = ?'
+
+        db.all(query2, [author, permlink, community], function(err, rows2) {
+          if(rows2.length > 0) {
+            callback({
+              featured: true,
+              community: community
+            });
+          } else {
+            callback({
+              featured: false,
+              community: community
+            });
+          }
+        });
+      } else {
+        callback({});
+      }
+    })
   }
 }
