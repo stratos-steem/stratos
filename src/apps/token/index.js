@@ -1,3 +1,11 @@
+/*
+  token
+  ---
+
+  The SRTS token. This can be transferred to others and is minted by grant
+  distribution (see src/distribute_grants.js).
+*/
+
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 

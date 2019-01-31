@@ -1,3 +1,11 @@
+/*
+  Index.js
+  ---
+
+  Sets up state storage in memory and in files, runs distribute_grants, sets
+  up APIs, CLI, and operation events by utilizing files in src/apps/
+*/
+
 const steem = require('dsteem');
 const steemState = require('steem-state');
 const steemTransact = require('steem-transact');
@@ -12,6 +20,7 @@ const genesis = require('./genesis');
 const dex = require('./apps/dex');
 const token = require('./apps/token');
 const grantVoting = require('./apps/grant-voting');
+const communities = require('./apps/communities');
 
 const distributeGrants = require('./distribute_grants');
 
@@ -26,6 +35,7 @@ const stateHistoryDirectory = __dirname + '/../states/'
 const genesisBlock = genesis.block;
 var state = genesis.state;
 var lastCheckpointHash = hash(state);
+var consensusDisagreements = {} // Counts disagreements on checkpoint states
 
 function getState() {
   return state;
@@ -42,7 +52,7 @@ const postConsensusCheck = process.env.CONSENSUS_CHECKS === 'true'
 
 const streamMode = process.env.STREAM_MODE || 'irreversible'  // Stream irreversible or latest?
 console.log('Using mode', streamMode)
-const rpcEndpoint = process.env.RPC_ENDPOINT || 'https://api.steemit.com'   // Use which client?
+const rpcEndpoint = process.env.RPC_ENDPOINT || 'https://rpc.usesteem.com'   // Use which client?
 console.log('Using endpoint', rpcEndpoint)
 const saveStateHistory = ('true' === process.env.SAVE_STATE_HISTORY)  // Whether to store a record of the history of the state; if true saves state every 100 blocks into states/ directory
                                                                       // Converts save_state_history to true/false
@@ -78,8 +88,7 @@ function startApp(startingBlock) {
 
     if(num % checkpointDelay === 0) {
       lastCheckpointHash = hash(state);
-      //if(processor.isStreaming && postCheckpoints) {
-      if(postConsensusCheck) {
+      if(processor.isStreaming() && postConsensusCheck) {
         console.log('Posting consensus check')
 
         transactor.json(username, key, 'consensus_check', lastCheckpointHash, function(err, result) {
@@ -100,7 +109,9 @@ function startApp(startingBlock) {
       if(json === lastCheckpointHash) {
         console.log('In agreement with', from);
       } else {
-        console.error('Disagreed with', from);
+        console.error('\x1b[31mDisagreed with', from, '\x1b[0m');
+        if(!consensusDisagreements[from]) consensusDisagreements[from] = 0;
+        consensusDisagreements[from]++;
       }
     } else {
       console.log('Invalid consensus check by', from)
@@ -114,8 +125,9 @@ function startApp(startingBlock) {
   processor = token.app(processor,getState,setState, fullPrefix);
   processor = dex.app(processor,getState,setState, fullPrefix);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
-
-  processor.start();
+  processor = communities.app(processor, getState, setState, fullPrefix);
+  communities.database.setup(startingBlock);
+  setTimeout(processor.start, 1000);
   console.log('Started state processor.');
 
   var inputToFunction = {}    // An input action cooresponds to a function
@@ -130,9 +142,16 @@ function startApp(startingBlock) {
     console.log(JSON.stringify(state, null, 2));
   });
 
+  inputInterface.on('consensus', function() {
+    for(user in consensusDisagreements) {
+      console.log(user, 'had', consensusDisagreements[user], 'disagreements');
+    }
+  });
+
   token.cli(inputInterface, getState);
   dex.cli(inputInterface, getState);
   grantVoting.cli(inputInterface, getState);
+  communities.cli(inputInterface, getState, fullPrefix);
 
 
   rl.on('line', function(data) {
@@ -140,7 +159,7 @@ function startApp(startingBlock) {
     if(typeof inputToFunction[split[0]] === 'function') {
       const funcToCall = inputToFunction[split[0]];
       split.shift(); // Remove split[0]
-      funcToCall(split, transactor, username, key);
+      funcToCall(split, transactor, username, key, client, steem);
     } else {
       console.log("Invalid command.");
     }
@@ -156,9 +175,14 @@ function startApp(startingBlock) {
     res.send(JSON.stringify([processor.getCurrentBlockNumber(),state], null, 2))
   });
 
+  app.get('/consensus', (req, res, next) => {
+    res.send(JSON.stringify(consensusDisagreements, null, 2))
+  });
+
   app = token.api(app, getState);
   app = dex.api(app, getState);
   app = grantVoting.api(app, getState);
+  app = communities.api(app, getState, fullPrefix);
 
   app.listen(port, function() {
     console.log(`stratos API listening on port ${port}!`)
@@ -166,7 +190,7 @@ function startApp(startingBlock) {
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.
-  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState])
+  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState, consensusDisagreements])
 
   fs.writeFile(stateStoreFile, data, (err) => {
     if (err) throw err;
@@ -194,7 +218,8 @@ if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous 
   const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
   state = json[2]; // The state will be set to the one linked to the starting block.
   lastCheckpointHash = json[1];
-  startApp(startingBlock);
+  consensusDisagreements = json[3];
+  startApp(startingBlock)
 } else {   // If this is the first run
   console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
   const startingBlock = genesisBlock;  // Simply start at the genesis block.

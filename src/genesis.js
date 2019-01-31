@@ -1,3 +1,5 @@
+// Contains the constants which determine the original state and the block the network starts at.
+
 const genesisState = {
   balances: {
     shredz7: 9900000,
@@ -7,7 +9,8 @@ const genesisState = {
   dex: {},
   granters: {},
   rewardPool: 100000,
-  granterVotes: {}
+  granterVotes: {},
+  communities: {}
 };
 
 const genesisBlock = 28934806;

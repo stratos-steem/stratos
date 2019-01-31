@@ -1,3 +1,14 @@
+/*
+  dex
+  ---
+
+  Decentralized exchange between SRTS and STEEM. This exchange is not symmetrical;
+  there is no such thing as buy orders. One can create a sell order, then others
+  can fill the sell order by sending STEEM with a specific memo. Allowing limit buy
+  orders introduces added complexity as soft-consensus apps cannot interact directly
+  with the STEEM currency.
+*/
+
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 

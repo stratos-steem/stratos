@@ -1,3 +1,12 @@
+/*
+  Grant Distribution
+  ---
+
+  Implementation of Stratos grant distribution, as seen in Steem post
+  https://steemit.com/steem/@shredz7/a-model-for-a-decentralized-open-company-stratos-update
+
+  
+*/
 
 const maxGranters = 3;
 
@@ -45,20 +54,20 @@ function distributeGrants(state, block) {
   const topGranters = sortedGranters.slice(0, maxGranters);
 
   // Distribute rewards
-  const rewardPerGranter = Math.floor(state.rewardPool/topGranters.length);
+  if(topGranters.length !== 0) {
+    const rewardPerGranter = Math.floor(state.rewardPool/topGranters.length);
 
-  for(granterNum in topGranters) {
-    const granter = topGranters[granterNum].granter;
-    console.log("Top granter",granter,"received",rewardPerGranter);
+    for(granterNum in topGranters) {
+      const granter = topGranters[granterNum].granter;
+      console.log("Top granter",granter,"received",rewardPerGranter);
 
-    if(state.balances[granter] === undefined) {
-      state.balances[granter] = 0;
+      if(state.balances[granter] === undefined) {
+        state.balances[granter] = 0;
+      }
+
+      state.balances[granter] += rewardPerGranter;
     }
-
-    state.balances[granter] += rewardPerGranter;
   }
-
-
 
   state.rewardPool = getRewardPool(block);
   return state;
@@ -66,7 +75,7 @@ function distributeGrants(state, block) {
 
 // Placeholder reward pool function. Actual function TBD.
 function getRewardPool(block) {
-  return dailyRewardDistribution = 100000;
+  return 0;
 }
 
 
