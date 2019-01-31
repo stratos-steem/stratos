@@ -47,8 +47,6 @@ function canPost(state, user, community) {
 }
 
 function app(processor, getState, setState, prefix) {
-  database.setup(processor.getCurrentBlockNumber());
-
   processor.on('cmmts_create', function(json, from) {
     var state = getState()
     const {matched, errorKey} = matcher.match(json, schemas.createCommunity);
@@ -341,5 +339,6 @@ function api(app, getState) {
 module.exports = {
   app: app,
   cli: cli,
-  api: api
+  api: api,
+  database: database
 }

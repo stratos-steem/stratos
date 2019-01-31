@@ -126,7 +126,7 @@ function startApp(startingBlock) {
   processor = dex.app(processor,getState,setState, fullPrefix);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
   processor = communities.app(processor, getState, setState, fullPrefix);
-
+  communities.database.setup(startingBlock);
   setTimeout(processor.start, 1000);
   console.log('Started state processor.');
 
