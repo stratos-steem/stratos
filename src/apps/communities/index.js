@@ -47,6 +47,8 @@ function canPost(state, user, community) {
 }
 
 function app(processor, getState, setState, prefix) {
+  database.setup(processor.getCurrentBlockNumber());
+
   processor.on('cmmts_create', function(json, from) {
     var state = getState()
     const {matched, errorKey} = matcher.match(json, schemas.createCommunity);
@@ -128,7 +130,7 @@ function app(processor, getState, setState, prefix) {
     const {matched, errorKey} = matcher.match(json, schemas.featurePost);
     if(matched && state.communities[json.community] !== undefined) {
       if(canEditRole(state, from, json.community, 'mod')) {
-        database.feature(json.community, processor.getCurrentBlockNumber(), json.author, from, json.permlink);
+        database.feature(json.community, json.author, from, json.permlink);
       }
     }
   });
@@ -314,12 +316,17 @@ function api(app, getState) {
   })
 
   app.get('/communities/:community', (req, res, next) => {
-    database.getMeta(req.params.community, function(metadata) {
-      res.send(JSON.stringify({
-        metadata: metadata,
-        roles: getState().communities[req.params.community].roles
-      }, null, 2));
-    });
+    if(getState().communities[req.params.community]) {
+      database.getMeta(req.params.community, function(metadata) {
+
+        res.send(JSON.stringify({
+          metadata: metadata,
+          roles: getState().communities[req.params.community].roles
+        }, null, 2));
+      });
+    } else {
+      next();
+    }
   });
 
   app.get('/communities/@:author/:permlink/community', (req, res, next) => {

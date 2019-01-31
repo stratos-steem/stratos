@@ -25,38 +25,48 @@ if(!fs.existsSync(dbLocation)) {
 
 const db = new sqlite3.Database(dbLocation);
 
-db.run('CREATE TABLE IF NOT EXISTS new_posts(community, block, author, permlink)', function(err) {
-  if(err) {
-    throw err
-  }
-});
 
-db.run('CREATE TABLE IF NOT EXISTS featured_posts(community, block, author, featurer, permlink)', function(err) {
-  if(err) {
-    throw err
-  }
-});
 
-db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata)', function(err) {
-  if(err) {
-    throw err
-  }
-});
+
 
 module.exports = {
-  post: function(community, block, author, permlink) {
-    // Insert value and at the same time remove all val
-    const query = 'INSERT INTO new_posts(community, block, author, permlink) VALUES(?,?,?,?)'
-    db.run(query, [community, block, author, permlink], function(err){
+  // This removes all posts greater than the starting block so no duplicate posts are created.
+  // Due to fullPermlink being a primary key duplicate posts can crash the entire server.
+  setup: function(block) {
+
+    db.run('CREATE TABLE IF NOT EXISTS posts(community, block, fullPermlink PRIMARY KEY, featured, featurer)', function(err) {
+      if(err) {
+        throw err
+      }
+
+      const query = 'DELETE FROM posts WHERE block > ?';
+      db.run(query, block, function(err) {
+        if(err) {
+          throw err
+        }
+      });
+    });
+
+    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata)', function(err) {
       if(err) {
         throw err
       }
     });
   },
 
-  feature: function(community, block, author, featurer, permlink) {
-    const query = 'INSERT INTO featured_posts(community, block, author, featurer, permlink) VALUES(?,?,?,?,?)'
-    db.run(query, [community, block, author, featurer, permlink], function(err){
+  post: function(community, block, author, permlink) {
+    // Insert value and at the same time remove all val
+    const query = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer) VALUES(?,?,?,?,?)'
+    db.run(query, [community, block, author+'/'+permlink, false, ''], function(err){
+      if(err) {
+        throw err
+      }
+    });
+  },
+
+  feature: function(community, author, featurer, permlink) {
+    const query = 'UPDATE posts SET featured=?, featurer=? WHERE fullPermlink=?'
+    db.run(query, [true, featurer, author + '/' + permlink], function(err){
       if(err) {
         throw err
       }
@@ -64,7 +74,7 @@ module.exports = {
   },
 
   getNew: function(community, limit, callback) {
-    const query = 'SELECT DISTINCT * FROM new_posts WHERE community=? ORDER BY block DESC LIMIT ?';
+    const query = 'SELECT DISTINCT * FROM posts WHERE community=? ORDER BY block DESC LIMIT ?';
 
     db.all(query, [community, limit], function(err, rows) {
       if(err) {
@@ -76,9 +86,9 @@ module.exports = {
   },
 
   getFeatured: function(community, limit, callback) {
-    const query = 'SELECT DISTINCT * FROM featured_posts WHERE community=? ORDER BY block DESC LIMIT ?';
+    const query = 'SELECT DISTINCT * FROM posts WHERE community=? AND featured=? ORDER BY block DESC LIMIT ?';
 
-    db.all(query, [community, limit], function(err, rows) {
+    db.all(query, [community, true, limit], function(err, rows) {
       if(err) {
         throw err
       }
@@ -88,15 +98,9 @@ module.exports = {
   },
 
   block: function(community, author, permlink) {
-    const query1 = 'DELETE FROM new_posts WHERE author = ? AND permlink = ? AND community = ?;'
+    const query = 'DELETE FROM posts WHERE fullPermlink=? AND community = ?;'
 
-    db.run(query1, [author, permlink, community], function(err) {
-      if(err) {throw err}
-    })
-
-    const query2 = 'DELETE FROM featured_posts WHERE author = ? AND permlink = ? AND community = ?;'
-
-    db.run(query2, [author, permlink, community], function(err) {
+    db.run(query, [author + '/' + permlink, community], function(err) {
       if(err) {throw err}
     })
   },
@@ -124,36 +128,25 @@ module.exports = {
       if(err) {
         throw err
       }
-
-      callback(rows[0].metadata);
+      if(rows[0]) {
+        callback(rows[0].metadata);
+      } else {
+        callback([]);
+      }
     });
   },
 
   getCommunityOfPost: function(author, permlink, callback) {
-    const query = 'SELECT DISTINCT * FROM new_posts WHERE author = ? AND permlink = ?'
-
-    db.all(query, [author, permlink], function(err, rows1) {
+    const query = 'SELECT DISTINCT * FROM posts WHERE fullPermlink=?'
+    db.all(query, [author + '/' + permlink], function(err, rows1) {
       if(err) {
         throw err
       }
 
       if(rows1.length > 0) {
-        const community = rows1[0].community
-        // If it has a community see if it is featured
-        const query2 = 'SELECT DISTINCT * FROM featured_posts WHERE author = ? AND permlink = ? AND community = ?'
-
-        db.all(query2, [author, permlink, community], function(err, rows2) {
-          if(rows2.length > 0) {
-            callback({
-              featured: true,
-              community: community
-            });
-          } else {
-            callback({
-              featured: false,
-              community: community
-            });
-          }
+        callback({
+          featured: rows1[0].featured,
+          community: rows1[0].community
         });
       } else {
         callback({});

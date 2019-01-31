@@ -127,7 +127,7 @@ function startApp(startingBlock) {
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
   processor = communities.app(processor, getState, setState, fullPrefix);
 
-  processor.start();
+  setTimeout(processor.start, 1000);
   console.log('Started state processor.');
 
   var inputToFunction = {}    // An input action cooresponds to a function
