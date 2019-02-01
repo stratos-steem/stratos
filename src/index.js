@@ -60,6 +60,7 @@ const networkId = process.env.NETWORK_ID || '0' // Which network id to use? 0 is
 console.log('Using network id', networkId)
 const fullPrefix = prefix + networkId + '_' // prefix + networkId = fullPrefix
 
+const noSync = process.env.NOSYNC === 'true'; // If this is true, then does not attempt to sync to latest block, just starts at current block. This is not secure and only for testing.
 const port = process.env.PORT || 3000
 
 const username = process.env.ACCOUNT
@@ -70,7 +71,9 @@ const client = new steem.Client(rpcEndpoint)
 console.log()
 
 function startApp(startingBlock) {
-  var processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
+  var processor;
+  processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
+  processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
 
   const transactor = steemTransact(client, steem, fullPrefix);
 
@@ -211,17 +214,23 @@ function saveState(currentBlock, currentState) { // Saves the state along with t
   }
 }
 
-
-if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous run
-  const data = fs.readFileSync(stateStoreFile, 'utf8');
-  const json = JSON.parse(data);
-  const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
-  state = json[2]; // The state will be set to the one linked to the starting block.
-  lastCheckpointHash = json[1];
-  consensusDisagreements = json[3];
-  startApp(startingBlock)
-} else {   // If this is the first run
-  console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
-  const startingBlock = genesisBlock;  // Simply start at the genesis block.
-  startApp(startingBlock);
+if(noSync) {
+  client.database.getDynamicGlobalProperties().then(function(result) {
+    console.log('WARNING - NOSYNC IS ENABLED. THIS IS NOT SECURE AND IS ONLY FOR TESTING.')
+    startApp(result.head_block_number);
+  });
+} else {
+  if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous run
+    const data = fs.readFileSync(stateStoreFile, 'utf8');
+    const json = JSON.parse(data);
+    const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
+    state = json[2]; // The state will be set to the one linked to the starting block.
+    lastCheckpointHash = json[1];
+    consensusDisagreements = json[3];
+    startApp(startingBlock)
+  } else {   // If this is the first run
+    console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
+    const startingBlock = genesisBlock;  // Simply start at the genesis block.
+    startApp(startingBlock);
+  }
 }
