@@ -2,6 +2,8 @@ states/
 state.json
 db/
 
+app.yaml
+
 # Above this line was added for the Engine project, below is from gitignore.io
 
 # Created by https://www.gitignore.io/api/node
