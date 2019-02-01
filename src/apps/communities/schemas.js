@@ -71,6 +71,9 @@ const updateMeta = {
 
   metadata: {
     type: 'string'
+  },
+  community: {
+    type: 'string'
   }
 }
 
