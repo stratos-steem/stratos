@@ -105,6 +105,10 @@ function startApp(startingBlock) {
     if(num % 28800 === 0) { // Every day
       state = distributeGrants(state, num);
     }
+
+    if(num % 9600 === 0) { // 3x per day
+      communities.updateDailyPosts(num, getState);
+    }
   });
 
   processor.on('consensus_check', function(json, from) {
@@ -171,7 +175,7 @@ function startApp(startingBlock) {
   app.use(bodyParser.json());
 
   app.get('/', (req, res, next) => {
-    res.send(JSON.stringify({block: processor.getCurrentBlockNumber(), latest: processor.isStreaming()}, null, 2))
+    res.send(JSON.stringify({block: processor.getCurrentBlockNumber(), latest: processor.isStreaming(), network: networkId}, null, 2))
   });
 
   app.get('/state', (req, res, next) => {
@@ -217,7 +221,17 @@ function saveState(currentBlock, currentState) { // Saves the state along with t
 if(noSync) {
   client.database.getDynamicGlobalProperties().then(function(result) {
     console.log('WARNING - NOSYNC IS ENABLED. THIS IS NOT SECURE AND IS ONLY FOR TESTING.')
-    startApp(result.head_block_number);
+    if(fs.existsSync(stateStoreFile)) {
+      const data = fs.readFileSync(stateStoreFile, 'utf8');
+      const json = JSON.parse(data);
+      state = json[2]; // The state will be set to the one linked to the starting block.
+      lastCheckpointHash = json[1];
+      consensusDisagreements = json[3];
+      startApp(result.head_block_number);
+    } else {
+      console.log('No state store file found. Starting from the genesis state (this is not a warning, everything is OK, this is to be expected)');
+      startApp(result.head_block_number);
+    }
   });
 } else {
   if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous run
