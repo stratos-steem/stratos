@@ -38,16 +38,9 @@ module.exports = {
       if(err) {
         throw err
       }
-
-      const query = 'DELETE FROM posts WHERE block > ?';
-      db.run(query, block, function(err) {
-        if(err) {
-          throw err
-        }
-      });
     });
 
-    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata)', function(err) {
+    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata,block,posts, dailyposts)', function(err) {
       if(err) {
         throw err
       }
@@ -55,9 +48,24 @@ module.exports = {
   },
 
   post: function(community, block, author, permlink) {
-    // Insert value and at the same time remove all val
-    const query = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer) VALUES(?,?,?,?,?)'
-    db.run(query, [community, block, author+'/'+permlink, false, ''], function(err){
+    db.serialize(function() {
+      const query1 = 'DELETE FROM posts WHERE fullPermlink=?'
+      db.run(query1, [author+'/'+permlink], function(err){
+        if(err) {
+          throw err
+        }
+      });
+
+      const query2 = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer) VALUES(?,?,?,?,?)'
+      db.run(query2, [community, block, author+'/'+permlink, false, ''], function(err){
+        if(err) {
+          throw err
+        }
+      });
+    });
+
+    const query2 = 'UPDATE community_meta SET posts=posts+1 WHERE community=?'
+    db.run(query2, [community], function(err){
       if(err) {
         throw err
       }
@@ -105,10 +113,10 @@ module.exports = {
     })
   },
 
-  create: function(community) {
-    const query = 'INSERT INTO community_meta(community, metadata) VALUES (?,?)'
+  create: function(community,block) {
+    const query = 'INSERT INTO community_meta(community, metadata,block,posts, dailyposts) VALUES (?,?,?,?,?)'
 
-    db.run(query, [community, '{}'], function(err) {
+    db.run(query, [community, '{}',block,0,0], function(err) {
       if(err) {throw err}
     })
   },
@@ -121,7 +129,7 @@ module.exports = {
     })
   },
 
-  getMeta: function(community, callback) {
+  getData: function(community, callback) {
     const query = 'SELECT DISTINCT * FROM community_meta WHERE community = ? LIMIT 1'
 
     db.all(query, [community], function(err, rows) {
@@ -129,7 +137,7 @@ module.exports = {
         throw err
       }
       if(rows[0]) {
-        callback(rows[0].metadata);
+        callback(rows[0]);
       } else {
         callback([]);
       }
@@ -150,6 +158,63 @@ module.exports = {
         });
       } else {
         callback({});
+      }
+    })
+  },
+
+  getCommunities: function(filter, limit, sort, state, callback) {
+    if(filter === 'date') {
+      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY block ' + sort + ' LIMIT ?';
+      db.all(query, [ limit], function(err, rows) {
+        if(err) {
+          throw err
+        }
+        callback(rows);
+      });
+    } else if(filter === 'dailyposts') {
+      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?'
+      db.all(query, [limit], function(err, rows) {
+        if(err) {
+          throw err
+        }
+        callback(rows);
+      });
+    } else {
+      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY posts ' + sort + ' LIMIT ?';
+      db.all(query, [limit], function(err, rows) {
+        if(err) {
+          throw err
+        }
+        callback(rows);
+      });
+    }
+  },
+
+  updateDailyPosts: function(block, getState) {
+    const query = 'SELECT community FROM posts WHERE block> ?'
+
+    db.all(query, [block-28800], function(err, rows) {
+      if(err) {
+        throw err
+      }
+      const state = getState();
+
+      const communityDailyPosts = {};
+      for(community in state.communities) {
+        communityDailyPosts[community] = 0;
+      }
+
+      for(i in rows) {
+        communityDailyPosts[rows[i].community]++;
+      }
+
+      const query = 'UPDATE community_meta SET dailyposts = ? WHERE community = ?'
+      for(community in communityDailyPosts) {
+        db.run(query, [communityDailyPosts[community], community], function(err) {
+          if(err) {
+            throw err;
+          }
+        });
       }
     })
   }

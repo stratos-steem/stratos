@@ -60,12 +60,10 @@ function app(processor, getState, setState, prefix) {
           mod: [],
           author: []
         },
-        posts: {
-
-        }
+        dailyPosts
       }
 
-      database.create(json.id);
+      database.create(json.id, processor.getCurrentBlockNumber());
 
       console.log(from, 'created community', json.id);
     } else {
@@ -315,12 +313,9 @@ function api(app, getState) {
 
   app.get('/communities/:community', (req, res, next) => {
     if(getState().communities[req.params.community]) {
-      database.getMeta(req.params.community, function(metadata) {
-
-        res.send(JSON.stringify({
-          metadata: metadata,
-          roles: getState().communities[req.params.community].roles
-        }, null, 2));
+      database.getData(req.params.community, function(data) {
+        data.roles = getState().communities[req.params.community].roles;
+        res.send(JSON.stringify(data, null, 2));
       });
     } else {
       next();
@@ -333,12 +328,45 @@ function api(app, getState) {
     });
   });
 
+  app.get('/communities/search/:filter', (req, res, next) => {
+    const filter = req.params.filter;
+    const sortQuery = req.query.sort || 'highest';       // 'highest' means highest of value first (default), 'lowest' means lowest of value first
+    const typeQuery = req.query.type || '';
+    const limit = parseInt(req.query.limit) || 100;
+
+    var sort;
+
+    if(sortQuery === 'lowest') {
+      sort = 'ASC'
+    } else {
+      sort = 'DESC'
+    }
+
+    if(typeQuery === 'restricted') {
+      type = 'restricted';
+    } else if(typeQuery === 'open') {
+      type = 'open';
+    } else {
+      type = '';
+    }
+
+
+    database.getCommunities(filter, limit, sort, getState(), function(rows) {
+      res.send(JSON.stringify(rows,null,2));
+    });
+  });
+
   return app;
+}
+
+function updateDailyPosts(block, getState) {
+  database.updateDailyPosts(block, getState);
 }
 
 module.exports = {
   app: app,
   cli: cli,
   api: api,
-  database: database
+  database: database,
+  updateDailyPosts: updateDailyPosts
 }
