@@ -59,8 +59,7 @@ function app(processor, getState, setState, prefix) {
           admin: [],
           mod: [],
           author: []
-        },
-        dailyPosts
+        }
       }
 
       database.create(json.id, processor.getCurrentBlockNumber());
@@ -333,6 +332,7 @@ function api(app, getState) {
     const sortQuery = req.query.sort || 'highest';       // 'highest' means highest of value first (default), 'lowest' means lowest of value first
     const typeQuery = req.query.type || '';
     const limit = parseInt(req.query.limit) || 100;
+    const search = req.query.search;
 
     var sort;
 
@@ -351,7 +351,7 @@ function api(app, getState) {
     }
 
 
-    database.getCommunities(filter, limit, sort, getState(), function(rows) {
+    database.getCommunities(filter, limit, sort, search, getState(), function(rows) {
       res.send(JSON.stringify(rows,null,2));
     });
   });

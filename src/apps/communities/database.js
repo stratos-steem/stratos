@@ -162,7 +162,7 @@ module.exports = {
     })
   },
 
-  getCommunities: function(filter, limit, sort, state, callback) {
+  getCommunities: function(filter, limit, sort, search, state, callback) {
     if(filter === 'date') {
       const query = 'SELECT DISTINCT * FROM community_meta ORDER BY block ' + sort + ' LIMIT ?';
       db.all(query, [ limit], function(err, rows) {
@@ -179,8 +179,16 @@ module.exports = {
         }
         callback(rows);
       });
+    } else if(filter === 'name') {
+      const query = 'SELECT DISTINCT * FROM community_meta WHERE community LIKE ? ORDER BY posts DESC LIMIT ?';
+      db.all(query, ['%' + search + '%', limit], function(err, rows) {
+        if(err) {
+          throw err
+        }
+        callback(rows);
+      })
     } else {
-      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY posts ' + sort + ' LIMIT ?';
+      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?';
       db.all(query, [limit], function(err, rows) {
         if(err) {
           throw err
