@@ -330,7 +330,6 @@ function api(app, getState) {
   app.get('/communities/search/:filter', (req, res, next) => {
     const filter = req.params.filter;
     const sortQuery = req.query.sort || 'highest';       // 'highest' means highest of value first (default), 'lowest' means lowest of value first
-    const typeQuery = req.query.type || '';
     const limit = parseInt(req.query.limit) || 100;
     const search = req.query.search;
 
@@ -341,15 +340,6 @@ function api(app, getState) {
     } else {
       sort = 'DESC'
     }
-
-    if(typeQuery === 'restricted') {
-      type = 'restricted';
-    } else if(typeQuery === 'open') {
-      type = 'open';
-    } else {
-      type = '';
-    }
-
 
     database.getCommunities(filter, limit, sort, search, getState(), function(rows) {
       res.send(JSON.stringify(rows,null,2));
