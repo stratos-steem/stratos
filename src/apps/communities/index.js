@@ -353,10 +353,15 @@ function updateDailyPosts(block, getState) {
   database.updateDailyPosts(block, getState);
 }
 
+function updateWeeklyUsers(block, getState) {
+  database.updateWeeklyUsers(block, getState);
+}
+
 module.exports = {
   app: app,
   cli: cli,
   api: api,
   database: database,
-  updateDailyPosts: updateDailyPosts
+  updateDailyPosts: updateDailyPosts,
+  updateWeeklyUsers: updateWeeklyUsers
 }

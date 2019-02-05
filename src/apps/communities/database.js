@@ -40,7 +40,7 @@ module.exports = {
       }
     });
 
-    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata,block,posts, dailyposts)', function(err) {
+    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata,block,posts, dailyposts, weeklyusers)', function(err) {
       if(err) {
         throw err
       }
@@ -114,9 +114,9 @@ module.exports = {
   },
 
   create: function(community,block) {
-    const query = 'INSERT INTO community_meta(community, metadata,block,posts, dailyposts) VALUES (?,?,?,?,?)'
+    const query = 'INSERT INTO community_meta(community, metadata,block,posts, dailyposts, weeklyusers) VALUES (?,?,?,?,?,?)'
 
-    db.run(query, [community, '{}',block,0,0], function(err) {
+    db.run(query, [community, '{}',block,0,0,0], function(err) {
       if(err) {throw err}
     })
   },
@@ -187,6 +187,14 @@ module.exports = {
         }
         returnRows(rows);
       });
+    } else if(filter === 'weeklyusers') {
+      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY weeklyusers ' + sort + ' LIMIT ?'
+      db.all(query, [limit], function(err, rows) {
+        if(err) {
+          throw err
+        }
+        returnRows(rows);
+      });
     } else if(filter === 'name') {
       const query = 'SELECT DISTINCT * FROM community_meta WHERE community LIKE ? ORDER BY posts DESC LIMIT ?';
       db.all(query, ['%' + search + '%', limit], function(err, rows) {
@@ -227,6 +235,35 @@ module.exports = {
       const query = 'UPDATE community_meta SET dailyposts = ? WHERE community = ?'
       for(community in communityDailyPosts) {
         db.run(query, [communityDailyPosts[community], community], function(err) {
+          if(err) {
+            throw err;
+          }
+        });
+      }
+    })
+  },
+
+  updateWeeklyUsers: function(block, getState) {
+    const query = 'SELECT community, fullPermlink FROM posts WHERE block> ?'
+
+    db.all(query, [block-201600], function(err, rows) {
+      if(err) {
+        throw err
+      }
+      const state = getState();
+
+      const communityWeeklyUsers = {};
+      for(community in state.communities) {
+        communityWeeklyUsers[community] = new Set();
+      }
+
+      for(i in rows) {
+        communityWeeklyUsers[rows[i].community].add(rows[i].fullPermlink.split('/')[0])
+      }
+
+      const query = 'UPDATE community_meta SET weeklyusers = ? WHERE community = ?'
+      for(community in communityWeeklyUsers) {
+        db.run(query, [communityWeeklyUsers[community].size, community], function(err) {
           if(err) {
             throw err;
           }

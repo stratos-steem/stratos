@@ -109,6 +109,10 @@ function startApp(startingBlock) {
     if(num % 9600 === 0) { // 3x per day
       communities.updateDailyPosts(num, getState);
     }
+
+    if(num % 9600 + 4800 === 0) { // 3x per day but offset from update daily posts
+      communities.updateWeeklyUsers(num, getState);
+    }
   });
 
   processor.on('consensus_check', function(json, from) {
