@@ -12,7 +12,7 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
-function app(processor, getState, setState, prefix) {
+function app(processor, getState, setState, prefix, communities) {
   processor.on('dex_sell_order', function(json, from) { // This transaction creates a sell order
     var state = getState()
     const {matched,errorKey} = matcher.match(json, schemas.sell_order); // Does it match the sell order transaction schema
@@ -81,6 +81,8 @@ function app(processor, getState, setState, prefix) {
     }
 
     setState(state)
+
+    communities.onTransfer(json, prefix, getState, setState, processor); // Transfer is shared by both the DEX and communities, so the DEX also calls the communities onOperation
   })
 
   return processor

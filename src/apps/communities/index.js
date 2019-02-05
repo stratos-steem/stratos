@@ -10,6 +10,10 @@ const schemas = require('./schemas');
 
 const database = require('./database');
 
+const communityCreationFeeReceiver = 'shredz7'  // Placeholders for testing
+const communityCreationFee = '1.000 STEEM'
+
+
 function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 'moderator', 'author'
   try {
     const roles = state.communities[community].roles
@@ -47,30 +51,6 @@ function canPost(state, user, community) {
 }
 
 function app(processor, getState, setState, prefix) {
-  processor.on('cmmts_create', function(json, from) {
-    var state = getState()
-    const {matched, errorKey} = matcher.match(json, schemas.createCommunity);
-    if(matched && state.communities[json.id] === undefined) {
-      state.communities[json.id] = {
-        roles: {
-          owner: [
-            from
-          ],
-          admin: [],
-          mod: [],
-          author: []
-        }
-      }
-
-      database.create(json.id, processor.getCurrentBlockNumber());
-
-      console.log(from, 'created community', json.id);
-    } else {
-      console.log('Invalid community creation from', from)
-    }
-    setState(state)
-  });
-
   processor.on('cmmts_grant_role', function(json, from) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.grantRole);
@@ -162,6 +142,34 @@ function app(processor, getState, setState, prefix) {
   });
 
   return processor;
+}
+
+function onTransfer(json, prefix, getState, setState, processor) { // The DEX and the Communities both share use of transfer operation, so the DEX calls this on every transfer
+  const state = getState();
+  const memoPrefix = '!' + prefix + 'cmmts_create'; // Prefixes the data in the memo, if this is the prefix then this is trying to create a community
+  if(json.memo.split(' ')[0] === memoPrefix && json.to === communityCreationFeeReceiver && json.amount === communityCreationFee) {  // All community creation should be sent to communityCreationFeeReceiver
+    const community = json.memo.split(' ')[1]
+    if(state.communities[community] === undefined) {
+      state.communities[community] = {
+        roles: {
+          owner: [
+            json.from
+          ],
+          admin: [],
+          mod: [],
+          author: []
+        }
+      }
+
+      database.create(community, processor.getCurrentBlockNumber());
+
+      console.log(json.from, 'created community', community);
+    } else {
+      console.log('Invalid community creation from', from)
+    }
+  }
+
+  setState(state);
 }
 
 function cli(input, getState, prefix) {
@@ -363,5 +371,6 @@ module.exports = {
   api: api,
   database: database,
   updateDailyPosts: updateDailyPosts,
-  updateWeeklyUsers: updateWeeklyUsers
+  updateWeeklyUsers: updateWeeklyUsers,
+  onTransfer: onTransfer
 }

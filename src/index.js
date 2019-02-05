@@ -135,7 +135,7 @@ function startApp(startingBlock) {
   });
 
   processor = token.app(processor,getState,setState, fullPrefix);
-  processor = dex.app(processor,getState,setState, fullPrefix);
+  processor = dex.app(processor,getState,setState, fullPrefix, communities);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
   processor = communities.app(processor, getState, setState, fullPrefix);
   communities.database.setup(startingBlock);
