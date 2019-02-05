@@ -13,6 +13,7 @@ const readline = require('readline');
 const fs = require('fs');
 var app = require('express')();
 const bodyParser = require('body-parser');
+const cors = require('cors')
 const hash = require('object-hash');
 
 
@@ -177,6 +178,7 @@ function startApp(startingBlock) {
   });
 
   app.use(bodyParser.json());
+  app.use(cors());
 
   app.get('/', (req, res, next) => {
     res.send(JSON.stringify({block: processor.getCurrentBlockNumber(), latest: processor.isStreaming(), network: networkId}, null, 2))

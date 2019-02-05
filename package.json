@@ -20,6 +20,7 @@
   "dependencies": {
     "body-parser": "^1.18.3",
     "chai": "^4.2.0",
+    "cors": "^2.8.5",
     "dsteem": "^0.11.2",
     "express": "^4.16.4",
     "match-schema": "^0.2.0",
