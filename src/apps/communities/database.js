@@ -163,13 +163,21 @@ module.exports = {
   },
 
   getCommunities: function(filter, limit, sort, search, state, callback) {
+    function returnRows(rows) {
+      for(i in rows) {
+        console.log(state.communities, state.communities[rows[i].community])
+        rows[i].roles = state.communities[rows[i].community].roles;
+      }
+      callback(rows);
+    }
+
     if(filter === 'date') {
       const query = 'SELECT DISTINCT * FROM community_meta ORDER BY block ' + sort + ' LIMIT ?';
       db.all(query, [ limit], function(err, rows) {
         if(err) {
           throw err
         }
-        callback(rows);
+        returnRows(rows);
       });
     } else if(filter === 'dailyposts') {
       const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?'
@@ -177,7 +185,7 @@ module.exports = {
         if(err) {
           throw err
         }
-        callback(rows);
+        returnRows(rows);
       });
     } else if(filter === 'name') {
       const query = 'SELECT DISTINCT * FROM community_meta WHERE community LIKE ? ORDER BY posts DESC LIMIT ?';
@@ -185,7 +193,7 @@ module.exports = {
         if(err) {
           throw err
         }
-        callback(rows);
+        returnRows(rows);
       })
     } else {
       const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?';
@@ -193,7 +201,7 @@ module.exports = {
         if(err) {
           throw err
         }
-        callback(rows);
+        returnRows(rows);
       });
     }
   },
