@@ -173,17 +173,6 @@ function onTransfer(json, prefix, getState, setState, processor) { // The DEX an
 }
 
 function cli(input, getState, prefix) {
-  input.on('communities_create', function(args, transactor, username, key) {
-    const id = args[0];
-
-    transactor.json(username, key, 'cmmts_create', {
-      id: id
-    }, function(err, result) {
-      if(err) {
-        console.error(err);
-      }
-    });
-  });
 
   input.on('communities_grant_role', function(args, transactor, username, key) {
     const role = args[0];
