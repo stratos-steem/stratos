@@ -117,11 +117,11 @@ function startApp(startingBlock) {
   });
 
   processor.on('consensus_check', function(json, from) {
-    if(typeof json === typeof 'thisisastring') {
+    if(typeof json === typeof 'string') {
       if(json === lastCheckpointHash) {
         console.log('In agreement with', from);
       } else {
-        console.error('\x1b[31mDisagreed with', from, '\x1b[0m');
+        console.error('Disagreed with', from, '');
         if(!consensusDisagreements[from]) consensusDisagreements[from] = 0;
         consensusDisagreements[from]++;
       }

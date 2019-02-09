@@ -110,6 +110,17 @@ function app(processor, getState, setState, prefix) {
     }
   });
 
+  processor.on('cmmts_pin', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.featurePost);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        database.pin(json.community, json.author, json.permlink);
+      }
+    }
+  })
+
   processor.on('cmmts_update_meta', function(json, from) {
     var state = getState();
 
@@ -165,7 +176,7 @@ function onTransfer(json, prefix, getState, setState, processor) { // The DEX an
 
       console.log(json.from, 'created community', community);
     } else {
-      console.log('Invalid community creation from', from)
+      console.log('Invalid community creation from', json.from)
     }
   }
 
@@ -261,6 +272,22 @@ function cli(input, getState, prefix) {
     });
   });
 
+  input.on('communities_pin', function(args, transactor, username, key, client, dsteem) {
+    const permlink = args[0];
+    const author = args[1];
+    const community = args[2];
+
+    transactor.json(username, key, 'cmmts_pin', {
+      permlink: permlink,
+      author: author,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
   input.on('communities_update_meta', function(args, transactor, username, key, client, dsteem) {
     const community = args[0];
     const metadata = args.slice(1).join(' ');
@@ -303,6 +330,12 @@ function api(app, getState) {
     }
 
     database.getFeatured(req.params.community, limit, function(rows) {
+      res.send(JSON.stringify(rows, null, 2));
+    });
+  })
+
+  app.get('/communities/:community/pinned', (req, res, next) => {
+    database.getPinned(req.params.community, function(rows) {
       res.send(JSON.stringify(rows, null, 2));
     });
   })

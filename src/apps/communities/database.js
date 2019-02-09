@@ -34,13 +34,19 @@ module.exports = {
   // Due to fullPermlink being a primary key duplicate posts can crash the entire server.
   setup: function(block) {
 
-    db.run('CREATE TABLE IF NOT EXISTS posts(community, block, fullPermlink PRIMARY KEY, featured, featurer)', function(err) {
+    db.run('CREATE TABLE IF NOT EXISTS posts(community, block, fullPermlink PRIMARY KEY, featured, featurer, pinned)', function(err) {
       if(err) {
         throw err
       }
     });
 
     db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata,block,posts, dailyposts, weeklyusers)', function(err) {
+      if(err) {
+        throw err
+      }
+    });
+
+    db.run('CREATE TABLE IF NOT EXISTS pinned_posts(community, block, fullPermlink)', function(err) {
       if(err) {
         throw err
       }
@@ -56,8 +62,8 @@ module.exports = {
         }
       });
 
-      const query2 = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer) VALUES(?,?,?,?,?)'
-      db.run(query2, [community, block, author+'/'+permlink, false, ''], function(err){
+      const query2 = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer, pinned) VALUES(?,?,?,?,?,?)'
+      db.run(query2, [community, block, author+'/'+permlink, false, '', false], function(err){
         if(err) {
           throw err
         }
@@ -81,6 +87,22 @@ module.exports = {
     });
   },
 
+  pin: function(community, author, permlink) {
+    const query1 = 'UPDATE posts SET pinned=? WHERE fullPermlink=? AND community=?'
+    db.run(query1, [true, author + '/' + permlink, community], function(err){
+      if(err) {
+        throw err
+      }
+    });
+
+    const query2 = 'INSERT INTO pinned_posts(community, fullPermlink) VALUES (?,?)'
+    db.run(query2, [community, author + '/' + permlink], function(err){
+      if(err) {
+        throw err
+      }
+    });
+  },
+
   getNew: function(community, limit, callback) {
     const query = 'SELECT DISTINCT * FROM posts WHERE community=? ORDER BY block DESC LIMIT ?';
 
@@ -97,6 +119,18 @@ module.exports = {
     const query = 'SELECT DISTINCT * FROM posts WHERE community=? AND featured=? ORDER BY block DESC LIMIT ?';
 
     db.all(query, [community, true, limit], function(err, rows) {
+      if(err) {
+        throw err
+      }
+
+      callback(rows);
+    });
+  },
+
+  getPinned: function(community, callback) {
+    const query = 'SELECT * FROM posts WHERE fullPermlink IN (SELECT fullPermlink FROM pinned_posts WHERE community=?)';
+
+    db.all(query, [community], function(err, rows) {
       if(err) {
         throw err
       }
