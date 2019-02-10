@@ -103,6 +103,22 @@ module.exports = {
     });
   },
 
+  unpin: function(community, author, permlink) {
+    const query1 = 'UPDATE posts SET pinned=? WHERE fullPermlink=? AND community=?'
+    db.run(query1, [false, author + '/' + permlink, community], function(err){
+      if(err) {
+        throw err
+      }
+    });
+
+    const query2 = 'DELETE FROM pinned_posts WHERE community=? AND fullPermlink=?'
+    db.run(query2, [community, author + '/' + permlink], function(err){
+      if(err) {
+        throw err
+      }
+    });
+  },
+
   getNew: function(community, limit, callback) {
     const query = 'SELECT DISTINCT * FROM posts WHERE community=? ORDER BY block DESC LIMIT ?';
 

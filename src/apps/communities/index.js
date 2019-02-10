@@ -119,7 +119,18 @@ function app(processor, getState, setState, prefix) {
         database.pin(json.community, json.author, json.permlink);
       }
     }
-  })
+  });
+
+  processor.on('cmmts_unpin', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.featurePost);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        database.unpin(json.community, json.author, json.permlink);
+      }
+    }
+  });
 
   processor.on('cmmts_update_meta', function(json, from) {
     var state = getState();
@@ -278,6 +289,22 @@ function cli(input, getState, prefix) {
     const community = args[2];
 
     transactor.json(username, key, 'cmmts_pin', {
+      permlink: permlink,
+      author: author,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_unpin', function(args, transactor, username, key, client, dsteem) {
+    const permlink = args[0];
+    const author = args[1];
+    const community = args[2];
+
+    transactor.json(username, key, 'cmmts_unpin', {
       permlink: permlink,
       author: author,
       community: community
