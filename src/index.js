@@ -138,9 +138,11 @@ function startApp(startingBlock) {
   processor = dex.app(processor,getState,setState, fullPrefix, communities);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
   processor = communities.app(processor, getState, setState, fullPrefix);
-  communities.database.setup(startingBlock);
-  setTimeout(processor.start, 1000);
-  console.log('Started state processor.');
+  communities.database.setup(function() {
+    console.log('DB synced.');
+    processor.start();
+    console.log('Started state processor.');
+  }); // Setup DB then start state processor
 
   var inputToFunction = {}    // An input action cooresponds to a function
 
