@@ -10,267 +10,309 @@
 */
 
 const sqlite3 = require('sqlite3').verbose();
+
+const Sequelize = require('sequelize');
 const fs = require('fs');
 
 const dbLocation = 'db/communities.db';
+const logging = console.log;
 
+const dbHost = process.env.DB_HOST;
+const dbUsername = process.env.DB_USER;
+const dbPassword = process.env.DB_PASS;
+const dbName = process.env.DB_NAME;
+
+let dialect = 'sqlite';
+if(dbHost) {
+  dialect = 'postgres';
+}
 
 if(!fs.existsSync(dbLocation)) {
   if(!fs.existsSync('db/')) {
-    fs.mkdirSync('db/')
+    fs.mkdirSync('db/');
   }
   const createStream = fs.createWriteStream('db/communities.db');
   createStream.end();
 }
 
-const db = new sqlite3.Database(dbLocation);
+const sequelize = new Sequelize(dbName, dbUsername, dbPassword, {
+  host: dbHost,
+  dialect: dialect,
 
-
-
-
-
-module.exports = {
-  // This removes all posts greater than the starting block so no duplicate posts are created.
-  // Due to fullPermlink being a primary key duplicate posts can crash the entire server.
-  setup: function(block) {
-
-    db.run('CREATE TABLE IF NOT EXISTS posts(community, block, fullPermlink PRIMARY KEY, featured, featurer, pinned)', function(err) {
-      if(err) {
-        throw err
-      }
-    });
-
-    db.run('CREATE TABLE IF NOT EXISTS community_meta(community, metadata,block,posts, dailyposts, weeklyusers)', function(err) {
-      if(err) {
-        throw err
-      }
-    });
-
-    db.run('CREATE TABLE IF NOT EXISTS pinned_posts(community, block, fullPermlink)', function(err) {
-      if(err) {
-        throw err
-      }
-    });
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30000,
+    idle: 10000
   },
 
-  post: function(community, block, author, permlink) {
-    db.serialize(function() {
-      const query1 = 'DELETE FROM posts WHERE fullPermlink=?'
-      db.run(query1, [author+'/'+permlink], function(err){
-        if(err) {
-          throw err
-        }
-      });
+  // SQLite only
+  storage: dbLocation,
 
-      const query2 = 'INSERT INTO posts(community, block, fullPermlink, featured, featurer, pinned) VALUES(?,?,?,?,?,?)'
-      db.run(query2, [community, block, author+'/'+permlink, false, '', false], function(err){
-        if(err) {
-          throw err
-        }
+  operatorsAliases: true,
+
+  logging: logging
+});
+
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('DB connection has been established successfully.');
+  })
+  .catch(err => {
+    console.error('Unable to connect to the database:', err);
+  });
+
+const Post = sequelize.define('post', {
+  community: Sequelize.STRING,
+  block: Sequelize.INTEGER,
+  fullPermlink: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  featured: Sequelize.BOOLEAN,
+  featurer: Sequelize.STRING,
+  pinned: Sequelize.BOOLEAN
+},{
+  indexes:[
+    {
+      unique: false,
+      fields:['block']
+    }
+  ]
+});
+
+const PinnedPost = sequelize.define('pinnedpost', {
+  community: Sequelize.STRING,
+  fullPermlink: Sequelize.STRING
+}, {
+  indexes: [
+  {
+    fields: ['community']
+  }
+]});
+
+const Community = sequelize.define('community', {
+  community: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  metadata: Sequelize.STRING,
+  block: Sequelize.INTEGER,
+  posts: Sequelize.INTEGER,
+  dailyposts: Sequelize.INTEGER,
+  weeklyusers: Sequelize.INTEGER
+})
+
+module.exports = {
+  setup: function(callback) {
+    sequelize.sync().then(callback);
+  },
+  post: function(community, block, author, permlink) {
+    // Need to make sure post isn't already in DB - this happens sometimes on restarts.
+    Post.destroy({where: { fullPermlink: author + '/' + permlink}}).then(() => {
+      Post.create({
+        community: community,
+        block: block,
+        fullPermlink: author + '/' + permlink,
+        featured: false,
+        featurer: '',
+        pinned: false
       });
     });
 
-    const query2 = 'UPDATE community_meta SET posts=posts+1 WHERE community=?'
-    db.run(query2, [community], function(err){
-      if(err) {
-        throw err
-      }
+    Community.findOne({ where: { community: community } }).then((rows) => {
+      Community.update({posts: rows.dataValues.posts+1}, {
+        where: {
+          community: community
+        }
+      });
     });
   },
 
   feature: function(community, author, featurer, permlink) {
-    const query = 'UPDATE posts SET featured=?, featurer=? WHERE fullPermlink=?'
-    db.run(query, [true, featurer, author + '/' + permlink], function(err){
-      if(err) {
-        throw err
+    Post.update({
+      featured: true,
+      featurer: featurer
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
       }
     });
   },
 
   pin: function(community, author, permlink) {
-    const query1 = 'UPDATE posts SET pinned=? WHERE fullPermlink=? AND community=?'
-    db.run(query1, [true, author + '/' + permlink, community], function(err){
-      if(err) {
-        throw err
+    Post.update({
+      pinned: true
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
       }
     });
 
-    const query2 = 'INSERT INTO pinned_posts(community, fullPermlink) VALUES (?,?)'
-    db.run(query2, [community, author + '/' + permlink], function(err){
-      if(err) {
-        throw err
-      }
+    PinnedPost.create({
+      community: community,
+      fullPermlink: author + '/' + permlink
     });
   },
 
   unpin: function(community, author, permlink) {
-    const query1 = 'UPDATE posts SET pinned=? WHERE fullPermlink=? AND community=?'
-    db.run(query1, [false, author + '/' + permlink, community], function(err){
-      if(err) {
-        throw err
+    Post.update({
+      pinned: false
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
       }
     });
 
-    const query2 = 'DELETE FROM pinned_posts WHERE community=? AND fullPermlink=?'
-    db.run(query2, [community, author + '/' + permlink], function(err){
-      if(err) {
-        throw err
+    PinnedPost.delete({
+      where: {
+        community: community,
+        fullPermlink: author + '/' + permlink
       }
     });
   },
 
   getNew: function(community, limit, callback) {
-    const query = 'SELECT DISTINCT * FROM posts WHERE community=? ORDER BY block DESC LIMIT ?';
-
-    db.all(query, [community, limit], function(err, rows) {
-      if(err) {
-        throw err
-      }
-
-      callback(rows);
-    });
+    Post.findAll({
+      where: {
+        community: community
+      },
+      order: sequelize.literal('block DESC'),
+      limit: limit
+    }).then(callback);
   },
 
   getFeatured: function(community, limit, callback) {
-    const query = 'SELECT DISTINCT * FROM posts WHERE community=? AND featured=? ORDER BY block DESC LIMIT ?';
-
-    db.all(query, [community, true, limit], function(err, rows) {
-      if(err) {
-        throw err
-      }
-
-      callback(rows);
-    });
+    Post.findAll({
+      where: {
+        community: community,
+        featured: true
+      },
+      order: sequelize.literal('block DESC'),
+      limit: limit
+    }).then(callback);
   },
 
   getPinned: function(community, callback) {
-    const query = 'SELECT * FROM posts WHERE fullPermlink IN (SELECT fullPermlink FROM pinned_posts WHERE community=?)';
-
-    db.all(query, [community], function(err, rows) {
-      if(err) {
-        throw err
+    // Workaround found here: https://stackoverflow.com/questions/36164694/sequelize-subquery-in-where-clause
+    const tempSQL = sequelize.dialect.QueryGenerator.selectQuery('pinnedposts',{
+      attributes: ['fullPermlink'],
+      where: {
+        community: community
       }
+    }).slice(0,-1); // to remove the ';' from the end of the SQL
 
-      callback(rows);
-    });
+    Post.findAll( {
+      where: {
+        fullPermlink: {
+          $in: sequelize.literal('(' + tempSQL + ')'),
+        }
+      }
+    }).then(callback);
   },
 
   block: function(community, author, permlink) {
-    const query = 'DELETE FROM posts WHERE fullPermlink=? AND community = ?;'
-
-    db.run(query, [author + '/' + permlink, community], function(err) {
-      if(err) {throw err}
-    })
+    Post.destroy({ where: {
+      community: community,
+      fullPermlink: author + '/' + permlink
+    } });
   },
 
   create: function(community,block) {
-    const query = 'INSERT INTO community_meta(community, metadata,block,posts, dailyposts, weeklyusers) VALUES (?,?,?,?,?,?)'
-
-    db.run(query, [community, '{}',block,0,0,0], function(err) {
-      if(err) {throw err}
-    })
+    Community.destroy({
+      where: {
+        community: community
+      }
+    }).then(() => {
+      Community.create({
+        community: community,
+        metadata: '{}',
+        block: block,
+        posts: 0,
+        dailyposts: 0,
+        weeklyusers: 0
+      });
+    });
   },
 
   updateMeta: function(community, metadata) {
-    const query = 'UPDATE community_meta SET metadata=? WHERE community=?'
-
-    db.run(query, [metadata, community], function(err) {
-      if(err) {throw err}
-    })
-  },
-
-  getData: function(community, callback) {
-    const query = 'SELECT DISTINCT * FROM community_meta WHERE community = ? LIMIT 1'
-
-    db.all(query, [community], function(err, rows) {
-      if(err) {
-        throw err
-      }
-      if(rows[0]) {
-        callback(rows[0]);
-      } else {
-        callback([]);
+    Community.update({
+      metadata: metadata
+    }, {
+      where: {
+        community: community
       }
     });
   },
 
-  getCommunityOfPost: function(author, permlink, callback) {
-    const query = 'SELECT DISTINCT * FROM posts WHERE fullPermlink=?'
-    db.all(query, [author + '/' + permlink], function(err, rows1) {
-      if(err) {
-        throw err
+  getData: function(community, callback) {
+    Community.findOne({
+      where: {
+        community: community
       }
+    }).then(callback);
+  },
 
-      if(rows1.length > 0) {
-        callback({
-          featured: rows1[0].featured,
-          community: rows1[0].community
-        });
-      } else {
-        callback({});
+  getCommunityOfPost: function(author, permlink, callback) {
+    Post.findOne({
+      where: {
+        fullPermlink: author + '/' + permlink
       }
-    })
+    }).then(callback);
   },
 
   getCommunities: function(filter, limit, sort, search, state, callback) {
     function returnRows(rows) {
       for(i in rows) {
-        console.log(state.communities, state.communities[rows[i].community])
         rows[i].roles = state.communities[rows[i].community].roles;
       }
       callback(rows);
     }
 
     if(filter === 'date') {
-      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY block ' + sort + ' LIMIT ?';
-      db.all(query, [ limit], function(err, rows) {
-        if(err) {
-          throw err
-        }
-        returnRows(rows);
-      });
+      Community.findAll({
+        order: [['block', sort]],
+        limit: limit
+      }).then(returnRows);
     } else if(filter === 'dailyposts') {
-      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?'
-      db.all(query, [limit], function(err, rows) {
-        if(err) {
-          throw err
-        }
-        returnRows(rows);
-      });
+      Community.findAll({
+        order: [['dailyposts', sort]],
+        limit: limit
+      }).then(returnRows);
     } else if(filter === 'weeklyusers') {
-      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY weeklyusers ' + sort + ' LIMIT ?'
-      db.all(query, [limit], function(err, rows) {
-        if(err) {
-          throw err
-        }
-        returnRows(rows);
-      });
+      Community.findAll({
+        order: [['weeklyusers', sort]],
+        limit: limit
+      }).then(returnRows);
     } else if(filter === 'name') {
-      const query = 'SELECT DISTINCT * FROM community_meta WHERE community LIKE ? ORDER BY posts DESC LIMIT ?';
-      db.all(query, ['%' + search + '%', limit], function(err, rows) {
-        if(err) {
-          throw err
-        }
-        returnRows(rows);
-      })
+      Community.findAll({
+        order: [['posts', sort]],
+        where: {
+          community: {
+            [Sequelize.Op.like]: '%' + search + '%'
+          }
+        },
+        limit: limit
+      }).then(returnRows);
     } else {
-      const query = 'SELECT DISTINCT * FROM community_meta ORDER BY dailyposts ' + sort + ' LIMIT ?';
-      db.all(query, [limit], function(err, rows) {
-        if(err) {
-          throw err
-        }
-        returnRows(rows);
-      });
+      Community.findAll({
+        order: [['posts', sort]],
+        limit: limit
+      }).then(returnRows);
     }
   },
 
   updateDailyPosts: function(block, getState) {
-    const query = 'SELECT community FROM posts WHERE block> ?'
-
-    db.all(query, [block-28800], function(err, rows) {
-      if(err) {
-        throw err
+    Post.findAll({
+      attributes: ['community'],
+      where: {
+        block: {[Sequelize.Op.gt]: block-28800}
       }
+    }).then((rows) => {
       const state = getState();
 
       const communityDailyPosts = {};
@@ -279,27 +321,27 @@ module.exports = {
       }
 
       for(i in rows) {
-        communityDailyPosts[rows[i].community]++;
+        communityDailyPosts[rows[i].dataValues.community]++;
       }
 
-      const query = 'UPDATE community_meta SET dailyposts = ? WHERE community = ?'
       for(community in communityDailyPosts) {
-        db.run(query, [communityDailyPosts[community], community], function(err) {
-          if(err) {
-            throw err;
+        Community.update({ dailyposts: communityDailyPosts[community]}, {
+          where: {
+            community: community
           }
         });
       }
-    })
+      console.log('Updated daily posts.')
+    });
   },
 
   updateWeeklyUsers: function(block, getState) {
-    const query = 'SELECT community, fullPermlink FROM posts WHERE block> ?'
-
-    db.all(query, [block-201600], function(err, rows) {
-      if(err) {
-        throw err
+    Post.findAll({
+      attributes: ['community', 'fullPermlink'],
+      where: {
+        block: {[Sequelize.Op.gt]: block-201600}
       }
+    }).then((rows) => {
       const state = getState();
 
       const communityWeeklyUsers = {};
@@ -308,17 +350,17 @@ module.exports = {
       }
 
       for(i in rows) {
-        communityWeeklyUsers[rows[i].community].add(rows[i].fullPermlink.split('/')[0])
+        communityWeeklyUsers[rows[i].dataValues.community].add(rows[i].dataValues.fullPermlink.split('/')[0]);
       }
 
-      const query = 'UPDATE community_meta SET weeklyusers = ? WHERE community = ?'
       for(community in communityWeeklyUsers) {
-        db.run(query, [communityWeeklyUsers[community].size, community], function(err) {
-          if(err) {
-            throw err;
+        Community.update({ weeklyusers: communityWeeklyUsers[community].size}, {
+          where: {
+            community: community
           }
         });
       }
-    })
+      console.log('Updated weekly users.')
+    });
   }
 }
