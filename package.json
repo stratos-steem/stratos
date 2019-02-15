@@ -26,6 +26,7 @@
     "match-schema": "^0.2.0",
     "mocha": "^5.2.0",
     "object-hash": "^1.3.1",
+    "pg": "^7.8.0",
     "sequelize": "^4.42.0",
     "sqlite3": "^4.0.6",
     "steem-state": "^1.3.2",

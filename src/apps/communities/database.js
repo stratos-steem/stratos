@@ -15,19 +15,29 @@ const Sequelize = require('sequelize');
 const fs = require('fs');
 
 const dbLocation = 'db/communities.db';
-const logging = false;
+const logging = console.log;
 
+const dbHost = process.env.DB_HOST;
+const dbUsername = process.env.DB_USER;
+const dbPassword = process.env.DB_PASS;
+const dbName = process.env.DB_NAME;
+
+let dialect = 'sqlite';
+if(dbHost) {
+  dialect = 'postgres';
+}
 
 if(!fs.existsSync(dbLocation)) {
   if(!fs.existsSync('db/')) {
-    fs.mkdirSync('db/')
+    fs.mkdirSync('db/');
   }
   const createStream = fs.createWriteStream('db/communities.db');
   createStream.end();
 }
 
-const sequelize = new Sequelize('database', 'username', 'password', {
-  dialect: 'sqlite',
+const sequelize = new Sequelize(dbName, dbUsername, dbPassword, {
+  host: dbHost,
+  dialect: dialect,
 
   pool: {
     max: 5,
@@ -62,23 +72,25 @@ const Post = sequelize.define('post', {
   },
   featured: Sequelize.BOOLEAN,
   featurer: Sequelize.STRING,
-  pinned: Sequelize.BOOLEAN,
-  indexes: [
+  pinned: Sequelize.BOOLEAN
+},{
+  indexes:[
     {
-      fields: ['block']
+      unique: false,
+      fields:['block']
     }
   ]
-})
+});
 
 const PinnedPost = sequelize.define('pinnedpost', {
   community: Sequelize.STRING,
-  fullPermlink: Sequelize.STRING,
+  fullPermlink: Sequelize.STRING
+}, {
   indexes: [
-    {
-      fields: ['community']
-    }
-  ]
-})
+  {
+    fields: ['community']
+  }
+]});
 
 const Community = sequelize.define('community', {
   community: {
