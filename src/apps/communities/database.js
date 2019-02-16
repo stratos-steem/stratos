@@ -9,12 +9,10 @@
   in a local database, SQLite3.
 */
 
-const sqlite3 = require('sqlite3').verbose();
-
 const Sequelize = require('sequelize');
 const fs = require('fs');
 
-const dbLocation = __dirname + '/../../../db/communities.db';
+const dbLocation = __dirname + '/db/communities.db';
 const logging = console.log;
 
 const dbHost = process.env.DB_HOST;
@@ -28,8 +26,8 @@ if(dbHost) {
 }
 
 if(!fs.existsSync(dbLocation)) {
-  if(!fs.existsSync(__dirname + '/../../../db/')) {
-    fs.mkdirSync(__dirname + '/../../../db/');
+  if(!fs.existsSync(__dirname + '/db/')) {
+    fs.mkdirSync(__dirname + '/db/');
   }
   const createStream = fs.createWriteStream(dbLocation);
   createStream.end();

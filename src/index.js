@@ -15,6 +15,7 @@ var app = require('express')();
 const bodyParser = require('body-parser');
 const cors = require('cors')
 const hash = require('object-hash');
+const constants = require('constants');
 
 
 const genesis = require('./genesis');
@@ -24,6 +25,18 @@ const grantVoting = require('./apps/grant-voting');
 const communities = require('./apps/communities');
 
 const distributeGrants = require('./distribute_grants');
+
+/*
+  This prevents crashing when using nohup command
+*/
+process.stdin.on('error', function(error) {
+  if (error.errno == constants.EBADF) {
+      console.log('stdin is unusable');
+  } else {
+      console.log('stdin error! ' + error);
+  }
+});
+
 
 const rl = readline.createInterface({
   input: process.stdin,
