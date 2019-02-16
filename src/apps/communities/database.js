@@ -14,7 +14,7 @@ const sqlite3 = require('sqlite3').verbose();
 const Sequelize = require('sequelize');
 const fs = require('fs');
 
-const dbLocation = 'db/communities.db';
+const dbLocation = __dirname + 'db/communities.db';
 const logging = console.log;
 
 const dbHost = process.env.DB_HOST;
