@@ -25,6 +25,7 @@ const grantVoting = require('./apps/grant-voting');
 const communities = require('./apps/communities');
 
 const distributeGrants = require('./distribute_grants');
+const database = require('./database');
 
 /*
   This prevents crashing when using nohup command
@@ -86,7 +87,6 @@ console.log()
 
 function startApp(startingBlock) {
   var processor;
-  processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
   processor = steemState(client, steem, startingBlock, 0, fullPrefix, streamMode)
 
   const transactor = steemTransact(client, steem, fullPrefix);
@@ -151,11 +151,7 @@ function startApp(startingBlock) {
   processor = dex.app(processor,getState,setState, fullPrefix, communities);
   processor = grantVoting.app(processor, getState, setState, fullPrefix);
   processor = communities.app(processor, getState, setState, fullPrefix);
-  communities.database.setup(function() {
-    console.log('DB synced.');
-    processor.start();
-    console.log('Started state processor.');
-  }); // Setup DB then start state processor
+  processor.start();
 
   var inputToFunction = {}    // An input action cooresponds to a function
 
@@ -218,54 +214,22 @@ function startApp(startingBlock) {
 }
 
 function saveState(currentBlock, currentState) { // Saves the state along with the current block number to be recalled on a later run.
-  const data = JSON.stringify([currentBlock, lastCheckpointHash, currentState, consensusDisagreements])
-
-  fs.writeFile(stateStoreFile, data, (err) => {
-    if (err) throw err;
-    console.log('Saved state.');
-  });
-
-  if(saveStateHistory && currentBlock % 10000 === 0) {
-    try {
-      fs.mkdirSync(stateHistoryDirectory)
-    } catch (err) {
-      if (err.code !== 'EEXIST') throw err
-    }
-
-    fs.writeFile(stateHistoryDirectory + 'state' + currentBlock + '.json', data, (err) => {
-      if (err) throw err;
-      console.log('Saved state history.');
-    });
-  }
+  database.saveState(currentBlock, lastCheckpointHash, currentState, consensusDisagreements);
 }
 
-if(noSync) {
-  client.database.getDynamicGlobalProperties().then(function(result) {
+database.setup(genesis.state, genesis.block, function(entry) {
+  state = JSON.parse(entry.state);
+  lastCheckpointHash = entry.lastCheckpointHash;
+  consensusDisagreements = entry.consensusDisagreements;
+
+  console.log('DB synced.');
+
+  if(noSync) {
     console.log('WARNING - NOSYNC IS ENABLED. THIS IS NOT SECURE AND IS ONLY FOR TESTING.')
-    if(fs.existsSync(stateStoreFile)) {
-      const data = fs.readFileSync(stateStoreFile, 'utf8');
-      const json = JSON.parse(data);
-      state = json[2]; // The state will be set to the one linked to the starting block.
-      lastCheckpointHash = json[1];
-      consensusDisagreements = json[3];
+    client.database.getDynamicGlobalProperties().then(function(result) {
       startApp(result.head_block_number);
-    } else {
-      console.log('No state store file found. Starting from the genesis state (this is not a warning, everything is OK, this is to be expected)');
-      startApp(result.head_block_number);
-    }
-  });
-} else {
-  if(fs.existsSync(stateStoreFile)) { // If we have saved the state in a previous run
-    const data = fs.readFileSync(stateStoreFile, 'utf8');
-    const json = JSON.parse(data);
-    const startingBlock = json[0];  // This will be read by startApp() to be the block to start on
-    state = json[2]; // The state will be set to the one linked to the starting block.
-    lastCheckpointHash = json[1];
-    consensusDisagreements = json[3];
-    startApp(startingBlock)
-  } else {   // If this is the first run
-    console.log('No state store file found. Starting from the genesis block + state (this is not a warning, everything is OK, this is to be expected)');
-    const startingBlock = genesisBlock;  // Simply start at the genesis block.
-    startApp(startingBlock);
+    });
+  } else {
+    startApp(entry.block);
   }
-}
+});

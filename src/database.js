@@ -1,19 +1,19 @@
 /*
-  Communities DB
+  State DB
   ---
 
-  This stores communities data in a database. This data is all data that is not
-  required for future consensus. For example, there is no need to know a community's
-  posts to be able to determine what posts will be accepted in the future. But end
-  users will most definitely want to know a community's posts. So we store this data
-  in a local database, SQLite3.
+  This stores state data, communities data, etc in a database.
 */
 
 const Sequelize = require('sequelize');
 const fs = require('fs');
 
-const dbLocation = __dirname + '/db/communities.db';
-const logging = console.log;
+const dbLocation = __dirname + '/../database.db';
+let logging = false;
+
+if(process.env.LOG_QUERIES) {
+  logging = console.log;
+}
 
 const dbHost = process.env.DB_HOST;
 const dbUsername = process.env.DB_USER;
@@ -26,9 +26,6 @@ if(dbHost) {
 }
 
 if(!fs.existsSync(dbLocation)) {
-  if(!fs.existsSync(__dirname + '/db/')) {
-    fs.mkdirSync(__dirname + '/db/');
-  }
   const createStream = fs.createWriteStream(dbLocation);
   createStream.end();
 }
@@ -100,12 +97,95 @@ const Community = sequelize.define('community', {
   posts: Sequelize.INTEGER,
   dailyposts: Sequelize.INTEGER,
   weeklyusers: Sequelize.INTEGER
-})
+},{
+  indexes:[
+    {
+      unique: false,
+      fields:['block']
+    },
+    {
+      unique: false,
+      fields:['posts']
+    },
+    {
+      unique: false,
+      fields:['dailyposts']
+    },
+    {
+      unique: false,
+      fields:['weeklyusers']
+    }
+  ]
+});
+
+/*
+  We store state in the database by using a single-row table called State for a few reasons:
+
+  * a DB migration will now also migrate the correct current state so the state
+  and DB don't have to be migrated seperately.
+
+  * State will no longer need to be stored on persistent disk so the nodes can run on
+  hosting services such as Heroku and Google App Engine much more easily.
+*/
+const State = sequelize.define('state', {
+  block: Sequelize.INTEGER,
+  state: Sequelize.STRING,
+  lastCheckpointHash: Sequelize.STRING,
+  consensusDisagreements: Sequelize.STRING
+},{
+  indexes:[
+    {
+      unique: false,
+      fields:['block']
+    }
+  ]
+});
 
 module.exports = {
-  setup: function(callback) {
-    sequelize.sync().then(callback);
+  setup: function(genesisState, genesisBlock, callback) {
+    sequelize.sync().then(() => {
+      State.findOrCreate({
+        where: {},
+        order: [['block', 'DESC']], // Just in case there are multiple state entries, then we just get the latest one.
+        limit: 1,
+        defaults: {
+          state: JSON.stringify(genesisState),
+          block: JSON.stringify(genesisBlock),
+          lastCheckpointHash: '',
+          consensusDisagreements: '{}'
+        }
+      }).then(function(result) {
+        const entry = result[0];
+        const created = result[1];
+
+        if (created) {
+          console.log('No state entry found, starting with genesis block and state.');
+        }
+
+        callback(entry.dataValues);
+      });
+    });
   },
+
+  saveState: function(currentBlock, lastCheckpointHash, currentState, consensusDisagreements) {
+    State.findOne({
+       where: {}
+    }).then((result) =>  {
+      if (result) {
+        result.update({
+          block: currentBlock,
+          lastCheckpointHash: lastCheckpointHash,
+          state: JSON.stringify(currentState),
+          consensusDisagreements: JSON.stringify(consensusDisagreements)
+        }).then(() => {
+          console.log('Saved state.')
+        });
+      } else {
+        console.log('Error saving state: state not correctly created in DB?')
+      }
+    });
+  },
+
   post: function(community, block, author, permlink) {
     // Need to make sure post isn't already in DB - this happens sometimes on restarts.
     Post.destroy({where: { fullPermlink: author + '/' + permlink}}).then(() => {

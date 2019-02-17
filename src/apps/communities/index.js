@@ -8,7 +8,7 @@
 const matcher = require('match-schema');
 const schemas = require('./schemas');
 
-const database = require('./database');
+const database = require('./../../database');
 
 const communityCreationFeeReceiver = 'shredz7'  // Placeholders for testing
 const communityCreationFee = '1.000 STEEM'
@@ -418,7 +418,6 @@ module.exports = {
   app: app,
   cli: cli,
   api: api,
-  database: database,
   updateDailyPosts: updateDailyPosts,
   updateWeeklyUsers: updateWeeklyUsers,
   onTransfer: onTransfer
