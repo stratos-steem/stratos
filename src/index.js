@@ -220,7 +220,7 @@ function saveState(currentBlock, currentState) { // Saves the state along with t
 database.setup(genesis.state, genesis.block, function(entry) {
   state = JSON.parse(entry.state);
   lastCheckpointHash = entry.lastCheckpointHash;
-  consensusDisagreements = entry.consensusDisagreements;
+  consensusDisagreements = JSON.parse(entry.consensusDisagreements);
 
   console.log('DB synced.');
 
