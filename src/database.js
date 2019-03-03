@@ -59,10 +59,10 @@ sequelize
   });
 
 const Post = sequelize.define('post', {
-  community: Sequelize.STRING,
+  community: Sequelize.TEXT,
   block: Sequelize.INTEGER,
   fullPermlink: {
-    type: Sequelize.STRING,
+    type: Sequelize.TEXT,
     primaryKey: true
   },
   featured: Sequelize.BOOLEAN,
@@ -78,8 +78,8 @@ const Post = sequelize.define('post', {
 });
 
 const PinnedPost = sequelize.define('pinnedpost', {
-  community: Sequelize.STRING,
-  fullPermlink: Sequelize.STRING
+  community: Sequelize.TEXT,
+  fullPermlink: Sequelize.TEXT
 }, {
   indexes: [
   {
@@ -89,7 +89,7 @@ const PinnedPost = sequelize.define('pinnedpost', {
 
 const Community = sequelize.define('community', {
   community: {
-    type: Sequelize.STRING,
+    type: Sequelize.TEXT,
     primaryKey: true
   },
   metadata: Sequelize.STRING,
@@ -129,9 +129,9 @@ const Community = sequelize.define('community', {
 */
 const State = sequelize.define('state', {
   block: Sequelize.INTEGER,
-  state: Sequelize.STRING,
-  lastCheckpointHash: Sequelize.STRING,
-  consensusDisagreements: Sequelize.STRING
+  state: Sequelize.TEXT,
+  lastCheckpointHash: Sequelize.TEXT,
+  consensusDisagreements: Sequelize.TEXT
 },{
   indexes:[
     {

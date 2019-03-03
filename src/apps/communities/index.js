@@ -370,7 +370,6 @@ function api(app, getState) {
   app.get('/communities/:community', (req, res, next) => {
     if(getState().communities[req.params.community]) {
       database.getData(req.params.community, function(data) {
-        console.log(data, getState());
         data.dataValues.roles = getState().communities[req.params.community].roles;
         res.send(JSON.stringify(data.dataValues, null, 2));
       });
