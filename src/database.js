@@ -72,7 +72,7 @@ const Post = sequelize.define('post', {
   indexes:[
     {
       unique: false,
-      fields:['block']
+      fields:['block', 'community']
     }
   ]
 });
