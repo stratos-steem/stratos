@@ -92,7 +92,7 @@ const Community = sequelize.define('community', {
     type: Sequelize.TEXT,
     primaryKey: true
   },
-  metadata: Sequelize.STRING,
+  metadata: Sequelize.TEXT,
   block: Sequelize.INTEGER,
   posts: Sequelize.INTEGER,
   dailyposts: Sequelize.INTEGER,
