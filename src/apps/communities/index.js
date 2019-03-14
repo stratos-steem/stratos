@@ -332,37 +332,27 @@ function cli(input, getState, prefix) {
 
 function api(app, getState) {
   app.get('/communities/:community/new', (req, res, next) => {
-    let limit = 200;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
 
-    const queryLimit = parseInt(req.query.limit);
-
-    // Querier can supply limit as long as is not unreasonable
-    if(queryLimit && queryLimit > 0 && queryLimit <= 1000) {
-      limit = queryLimit
-    }
-
-    database.getNew(req.params.community, limit, function(rows) {
+    database.getNew(req.params.community, limit, offset, function(rows) {
       res.send(JSON.stringify(rows, null, 2));
     });
   })
 
   app.get('/communities/:community/featured', (req, res, next) => {
-    let limit = 200;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
 
-    const queryLimit = parseInt(req.query.limit);
-
-    // Querier can supply limit as long as is not unreasonable
-    if(queryLimit && queryLimit > 0 && queryLimit <= 1000) {
-      limit = queryLimit
-    }
-
-    database.getFeatured(req.params.community, limit, function(rows) {
+    database.getFeatured(req.params.community, limit, offset, function(rows) {
       res.send(JSON.stringify(rows, null, 2));
     });
   })
 
   app.get('/communities/:community/pinned', (req, res, next) => {
-    database.getPinned(req.params.community, function(rows) {
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+    database.getPinned(req.params.community, limit, offset, function(rows) {
       res.send(JSON.stringify(rows, null, 2));
     });
   })
@@ -388,6 +378,7 @@ function api(app, getState) {
     const filter = req.params.filter;
     const sortQuery = req.query.sort || 'highest';       // 'highest' means highest of value first (default), 'lowest' means lowest of value first
     const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
     const search = req.query.search;
 
     var sort;
@@ -398,7 +389,7 @@ function api(app, getState) {
       sort = 'DESC'
     }
 
-    database.getCommunities(filter, limit, sort, search, getState(), function(rows) {
+    database.getCommunities(filter, limit, offset, sort, search, getState(), function(rows) {
       res.send(JSON.stringify(rows,null,2));
     });
   });

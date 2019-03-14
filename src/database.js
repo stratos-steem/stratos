@@ -254,34 +254,38 @@ module.exports = {
     });
   },
 
-  getNew: function(community, limit, callback) {
+  getNew: function(community, limit, offset, callback) {
     Post.findAll({
       where: {
         community: community
       },
       order: sequelize.literal('block DESC'),
-      limit: limit
+      limit: limit,
+      offset: offset
     }).then(callback);
   },
 
-  getFeatured: function(community, limit, callback) {
+  getFeatured: function(community, limit, offset, callback) {
     Post.findAll({
       where: {
         community: community,
         featured: true
       },
       order: sequelize.literal('block DESC'),
-      limit: limit
+      limit: limit,
+      offset: offset
     }).then(callback);
   },
 
-  getPinned: function(community, callback) {
+  getPinned: function(community, limit, offset, callback) {
     // Workaround found here: https://stackoverflow.com/questions/36164694/sequelize-subquery-in-where-clause
     const tempSQL = sequelize.dialect.QueryGenerator.selectQuery('pinnedposts',{
       attributes: ['fullPermlink'],
       where: {
         community: community
-      }
+      },
+      limit: limit,
+      offset: offset
     }).slice(0,-1); // to remove the ';' from the end of the SQL
 
     Post.findAll( {
@@ -343,7 +347,7 @@ module.exports = {
     }).then(callback);
   },
 
-  getCommunities: function(filter, limit, sort, search, state, callback) {
+  getCommunities: function(filter, limit, offset, sort, search, state, callback) {
     function returnRows(rows) {
       for(i in rows) {
         rows[i].roles = state.communities[rows[i].community].roles;
@@ -354,17 +358,20 @@ module.exports = {
     if(filter === 'date') {
       Community.findAll({
         order: [['block', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else if(filter === 'dailyposts') {
       Community.findAll({
         order: [['dailyposts', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else if(filter === 'weeklyusers') {
       Community.findAll({
         order: [['weeklyusers', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else if(filter === 'name') {
       Community.findAll({
@@ -374,12 +381,14 @@ module.exports = {
             [Sequelize.Op.like]: '%' + search + '%'
           }
         },
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else {
       Community.findAll({
         order: [['posts', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     }
   },
