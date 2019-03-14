@@ -182,7 +182,7 @@ function startApp(startingBlock) {
     if(typeof inputToFunction[split[0]] === 'function') {
       const funcToCall = inputToFunction[split[0]];
       split.shift(); // Remove split[0]
-      funcToCall(split, transactor, username, key, client, steem);
+      funcToCall(split, transactor, username, key, client, steem, data);
     } else {
       console.log("Invalid command.");
     }

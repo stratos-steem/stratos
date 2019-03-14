@@ -50,18 +50,35 @@ function canPost(state, user, community) {
   }
 }
 
+function editRole(state, updateType, community, from, receiver, role) {
+  if(updateType === 'add') {
+    // Check authorization
+    if(canEditRole(state, from, community, role)) {
+      console.log(from, 'granted role', role, 'to', receiver);
+      state.communities[community].roles[role].push(receiver)
+    } else {
+      console.log(from, 'tried to grant role but lacked proper permissions.')
+    }
+  } else {
+    // Check authorization
+    if(canEditRole(state, from, community, role)) {
+      console.log(from, 'removed role', role, 'from', receiver);
+      const roleIndex = state.communities[community].roles[role].indexOf(receiver);
+      state.communities[community].roles[role].splice(roleIndex, 1);
+    } else {
+      console.log(from, 'tried to remove role but lacked proper permissions.')
+    }
+  }
+
+  return state;
+}
+
 function app(processor, getState, setState, prefix) {
   processor.on('cmmts_grant_role', function(json, from) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.grantRole);
     if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) === -1) {
-      // Check authorization
-      if(canEditRole(state, from, json.community, json.role)) {
-        console.log(from, 'granted role', json.role, 'to', json.receiver);
-        state.communities[json.community].roles[json.role].push(json.receiver)
-      } else {
-        console.log(from, 'tried to grant role but lacked proper permissions.')
-      }
+      state = editRole(state, 'add', json.community, from, json.receiver, json.role);
     } else {
       console.log('Invalid role grant from', from)
     }
@@ -73,19 +90,37 @@ function app(processor, getState, setState, prefix) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.removeRole);
     if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) > -1) {
-      // Check authorization
-      if(canEditRole(state, from, json.community, json.role)) {
-        console.log(from, 'removed role', json.role, 'from', json.receiver);
-        const roleIndex = state.communities[json.community].roles[json.role].indexOf(json.receiver);
-        state.communities[json.community].roles[json.role].splice(roleIndex, 1);
-      } else {
-        console.log(from, 'tried to remove role but lacked proper permissions.')
-      }
+      state = editRole(state, 'remove', json.community, from, json.receiver, json.role);
     } else {
       console.log('Invalid role removal from', from)
     }
 
     setState(state);
+  });
+
+  processor.on('cmmts_bulk_role_update', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.bulkRoleUpdate);
+    if(matched && state.communities[json.community] !== undefined) {
+      let state = getState();
+      for(const i in json.operations) {
+        const operation = json.operations[i];
+        if(operation.updateType === 'add') {
+          if(matched && state.communities[json.community] !== undefined && (operation.role === 'owner' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) === -1) {
+            state = editRole(state, 'add', json.community, from, operation.receiver, operation.role);
+          }
+        } else {
+          if(matched && state.communities[json.community] !== undefined && (operation.role === 'owner' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) > -1) {
+            state = editRole(state, 'remove', json.community, from, operation.receiver, operation.role);
+          }
+        }
+      }
+
+      setState(state);
+    } else {
+      console.log('Invalid bulk role update from', from)
+    }
   });
 
   processor.on('cmmts_block_post', function(json, from) {
@@ -171,7 +206,8 @@ function onTransfer(json, prefix, getState, setState, processor) { // The DEX an
   const memoPrefix = '!' + prefix + 'cmmts_create'; // Prefixes the data in the memo, if this is the prefix then this is trying to create a community
   if(json.memo.split(' ')[0] === memoPrefix && json.to === communityCreationFeeReceiver && json.amount === communityCreationFee) {  // All community creation should be sent to communityCreationFeeReceiver
     const community = json.memo.split(' ')[1]
-    if(state.communities[community] === undefined) {
+    const {matched, errorKey} = matcher.match(community, schemas.community);
+    if(matched && state.communities[community] === undefined) {
       state.communities[community] = {
         roles: {
           owner: [
@@ -187,7 +223,7 @@ function onTransfer(json, prefix, getState, setState, processor) { // The DEX an
 
       console.log(json.from, 'created community', community);
     } else {
-      console.log('Invalid community creation from', json.from)
+      console.log('Invalid community creation from', json.from);
     }
   }
 
@@ -222,6 +258,33 @@ function cli(input, getState, prefix) {
       receiver: receiver,
       role: role
     }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_bulk_role_update', function(args, transactor, username, key, client, steem, fullInputString) {
+    const community = args[0];
+    const split = fullInputString.split(':').slice(1).map(x => x.trim());
+
+    const json = {
+      community: community,
+      operations: []
+    }
+    for(const i in split) {
+      const data = split[i].split(' ');
+      const type = data[0]; // remove or add
+      const receiver = data[1];
+      const role = data[2];
+      json.operations.push({
+        updateType: type,
+        receiver: receiver,
+        role: role
+      });
+    }
+
+    transactor.json(username, key, 'cmmts_bulk_role_update', json, function(err, result) {
       if(err) {
         console.error(err);
       }
