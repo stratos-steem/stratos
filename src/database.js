@@ -187,24 +187,28 @@ module.exports = {
   },
 
   post: function(community, block, author, permlink) {
-    // Need to make sure post isn't already in DB - this happens sometimes on restarts.
-    Post.destroy({where: { fullPermlink: author + '/' + permlink}}).then(() => {
-      Post.create({
+    Post.findOrCreate({
+      where: {
+        fullPermlink: author + '/' + permlink
+      },
+      defaults: {
         community: community,
         block: block,
         fullPermlink: author + '/' + permlink,
         featured: false,
         featurer: '',
         pinned: false
-      });
-    });
-
-    Community.findOne({ where: { community: community } }).then((rows) => {
-      Community.update({posts: rows.dataValues.posts+1}, {
-        where: {
-          community: community
-        }
-      });
+      }
+    }).then((result, created) => {
+      if(created) {
+        Community.findOne({ where: { community: community } }).then((rows) => {
+          Community.update({posts: rows.dataValues.posts+1}, {
+            where: {
+              community: community
+            }
+          });
+        });
+      }
     });
   },
 
