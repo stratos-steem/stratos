@@ -124,7 +124,7 @@ function startApp(startingBlock) {
       communities.updateDailyPosts(num, getState);
     }
 
-    if(num % 9600 + 4800 === 0) { // 3x per day but offset from update daily posts
+    if((num + 4800) % 9600 === 0) { // 3x per day but offset from update daily posts
       communities.updateWeeklyUsers(num, getState);
     }
   });
