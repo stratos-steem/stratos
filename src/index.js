@@ -38,6 +38,7 @@ process.stdin.on('error', function(error) {
   }
 });
 
+process.on('unhandledRejection', err => { throw err })
 
 const rl = readline.createInterface({
   input: process.stdin,
