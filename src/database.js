@@ -261,7 +261,8 @@ module.exports = {
   getNew: function(community, limit, offset, callback) {
     Post.findAll({
       where: {
-        community: community
+        community: community,
+        pinned: false
       },
       order: sequelize.literal('block DESC'),
       limit: limit,
@@ -273,7 +274,8 @@ module.exports = {
     Post.findAll({
       where: {
         community: community,
-        featured: true
+        featured: true,
+        pinned: false
       },
       order: sequelize.literal('block DESC'),
       limit: limit,
