@@ -199,8 +199,8 @@ module.exports = {
         featurer: '',
         pinned: false
       }
-    }).then((result, created) => {
-      if(created) {
+    }).then((result) => {
+      if(result[1]) {
         Community.findOne({ where: { community: community } }).then((rows) => {
           Community.update({posts: rows.dataValues.posts+1}, {
             where: {
