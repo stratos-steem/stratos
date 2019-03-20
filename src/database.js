@@ -95,7 +95,7 @@ const Community = sequelize.define('community', {
   metadata: Sequelize.TEXT,
   block: Sequelize.INTEGER,
   posts: Sequelize.INTEGER,
-  dailyposts: Sequelize.INTEGER,
+  weeklyposts: Sequelize.INTEGER,
   weeklyusers: Sequelize.INTEGER
 },{
   indexes:[
@@ -109,7 +109,7 @@ const Community = sequelize.define('community', {
     },
     {
       unique: false,
-      fields:['dailyposts']
+      fields:['weeklyposts']
     },
     {
       unique: false,
@@ -321,7 +321,7 @@ module.exports = {
         metadata: '{}',
         block: block,
         posts: 0,
-        dailyposts: 0,
+        weeklyposts: 0,
         weeklyusers: 0
       });
     });
@@ -367,9 +367,9 @@ module.exports = {
         limit: limit,
         offset: offset
       }).then(returnRows);
-    } else if(filter === 'dailyposts') {
+    } else if(filter === 'weeklyposts') {
       Community.findAll({
-        order: [['dailyposts', sort]],
+        order: [['weeklyposts', sort]],
         limit: limit,
         offset: offset
       }).then(returnRows);
@@ -399,32 +399,32 @@ module.exports = {
     }
   },
 
-  updateDailyPosts: function(block, getState) {
+  updateWeeklyPosts: function(block, getState) {
     Post.findAll({
       attributes: ['community'],
       where: {
-        block: {[Sequelize.Op.gt]: block-28800}
+        block: {[Sequelize.Op.gt]: block-201600}
       }
     }).then((rows) => {
       const state = getState();
 
-      const communityDailyPosts = {};
+      const communityWeeklyPosts = {};
       for(community in state.communities) {
-        communityDailyPosts[community] = 0;
+        communityWeeklyPosts[community] = 0;
       }
 
       for(i in rows) {
-        communityDailyPosts[rows[i].dataValues.community]++;
+        communityWeeklyPosts[rows[i].dataValues.community]++;
       }
 
-      for(community in communityDailyPosts) {
-        Community.update({ dailyposts: communityDailyPosts[community]}, {
+      for(community in communityWeeklyPosts) {
+        Community.update({ weeklyposts: communityWeeklyPosts[community]}, {
           where: {
             community: community
           }
         });
       }
-      console.log('Updated daily posts.')
+      console.log('Updated weekly posts.')
     });
   },
 

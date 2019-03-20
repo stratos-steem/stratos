@@ -460,8 +460,8 @@ function api(app, getState) {
   return app;
 }
 
-function updateDailyPosts(block, getState) {
-  database.updateDailyPosts(block, getState);
+function updateWeeklyPosts(block, getState) {
+  database.updateWeeklyPosts(block, getState);
 }
 
 function updateWeeklyUsers(block, getState) {
@@ -472,7 +472,7 @@ module.exports = {
   app: app,
   cli: cli,
   api: api,
-  updateDailyPosts: updateDailyPosts,
+  updateWeeklyPosts: updateWeeklyPosts,
   updateWeeklyUsers: updateWeeklyUsers,
   onTransfer: onTransfer
 }

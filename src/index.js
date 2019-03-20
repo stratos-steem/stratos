@@ -122,10 +122,10 @@ function startApp(startingBlock) {
     }
 
     if(num % 9600 === 0) { // 3x per day
-      communities.updateDailyPosts(num, getState);
+      communities.updateWeeklyPosts(num, getState);
     }
 
-    if((num + 4800) % 9600 === 0) { // 3x per day but offset from update daily posts
+    if((num + 4800) % 9600 === 0) { // 3x per day but offset from update weekly posts
       communities.updateWeeklyUsers(num, getState);
     }
   });
