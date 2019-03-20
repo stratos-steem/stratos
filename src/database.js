@@ -381,7 +381,7 @@ module.exports = {
       }).then(returnRows);
     } else if(filter === 'name') {
       Community.findAll({
-        order: [['posts', sort]],
+        order: [['weeklyposts', sort]],
         where: {
           community: {
             [Sequelize.Op.like]: '%' + search + '%'
