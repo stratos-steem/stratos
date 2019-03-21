@@ -355,10 +355,15 @@ module.exports = {
 
   getCommunities: function(filter, limit, offset, sort, search, state, callback) {
     function returnRows(rows) {
+
+      const returnValue = rows;
       for(i in rows) {
-        rows[i].roles = state.communities[rows[i].community].roles;
+        try {
+          returnValue[i].dataValues.roles = state.communities[rows[i].community].roles;
+        } catch(err) {
+        }
       }
-      callback(rows);
+      callback(returnValue);
     }
 
     if(filter === 'date') {
