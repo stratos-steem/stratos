@@ -224,6 +224,18 @@ module.exports = {
     });
   },
 
+  unfeature: function(community, author, featurer, permlink) {
+    Post.update({
+      featured: false,
+      featurer: ''
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
+  },
+
   pin: function(community, author, permlink) {
     Post.update({
       pinned: true
