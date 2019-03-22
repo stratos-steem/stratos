@@ -41,10 +41,10 @@ function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 
 }
 
 function canPost(state, user, community) {
-  for(i in ['owner', 'admin', 'mod', 'author']) {
-    const role = ['owner', 'admin', 'mod', 'author'][i];
+  for(i in ['author', 'owner', 'admin', 'mod']) {
+    const role = ['author', 'owner', 'admin', 'mod'][i];
     const roles = state.communities[community].roles;
-    if(roles[role].indexOf(user) !== -1) {
+    if(roles[role].indexOf(user) !== -1 || roles[role].indexOf('eo') !== -1) {
       return true;
     }
   }
