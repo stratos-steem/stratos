@@ -67,7 +67,8 @@ const Post = sequelize.define('post', {
   },
   featured: Sequelize.BOOLEAN,
   featurer: Sequelize.STRING,
-  pinned: Sequelize.BOOLEAN
+  pinned: Sequelize.BOOLEAN,
+  blocked: Sequelize.BOOLEAN
 },{
   indexes:[
     {
@@ -197,7 +198,8 @@ module.exports = {
         fullPermlink: author + '/' + permlink,
         featured: false,
         featurer: '',
-        pinned: false
+        pinned: false,
+        blocked: false
       }
     }).then((result) => {
       if(result[1]) {
@@ -274,7 +276,8 @@ module.exports = {
     Post.findAll({
       where: {
         community: community,
-        pinned: false
+        pinned: false,
+        blocked: false
       },
       order: sequelize.literal('block DESC'),
       limit: limit,
@@ -287,7 +290,8 @@ module.exports = {
       where: {
         community: community,
         featured: true,
-        pinned: false
+        pinned: false,
+        blocked: false
       },
       order: sequelize.literal('block DESC'),
       limit: limit,
@@ -316,10 +320,25 @@ module.exports = {
   },
 
   block: function(community, author, permlink) {
-    Post.destroy({ where: {
-      community: community,
-      fullPermlink: author + '/' + permlink
-    } });
+    Post.update({
+      blocked: true
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
+  },
+
+  unblock: function(community, author, permlink) {
+    Post.update({
+      blocked: false
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
   },
 
   create: function(community,block) {
@@ -420,7 +439,8 @@ module.exports = {
     Post.findAll({
       attributes: ['community'],
       where: {
-        block: {[Sequelize.Op.gt]: block-201600}
+        block: {[Sequelize.Op.gt]: block-201600},
+        blocked: false
       }
     }).then((rows) => {
       const state = getState();
@@ -449,7 +469,8 @@ module.exports = {
     Post.findAll({
       attributes: ['community', 'fullPermlink'],
       where: {
-        block: {[Sequelize.Op.gt]: block-201600}
+        block: {[Sequelize.Op.gt]: block-201600},
+        blocked: false
       }
     }).then((rows) => {
       const state = getState();
