@@ -44,7 +44,7 @@ function canPost(state, user, community) {
   for(i in ['author', 'owner', 'admin', 'mod']) {
     const role = ['author', 'owner', 'admin', 'mod'][i];
     const roles = state.communities[community].roles;
-    if(roles[role].indexOf(user) !== -1 || roles[role].indexOf('eo') !== -1) {
+    if((roles[role].indexOf(user) !== -1 || roles[role].indexOf('eo') !== -1) && roles['blocked'].indexOf(user) === -1) {
       return true;
     }
   }
@@ -145,6 +145,28 @@ function app(processor, getState, setState, prefix) {
     }
   });
 
+  processor.on('cmmts_block_user', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.blockUser);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        state.communities[json.community].roles.blocked.push(json.receiver);
+      }
+    }
+  });
+
+  processor.on('cmmts_unblock_user', function(json, from) {
+    var state = getState();
+
+    const {matched, errorKey} = matcher.match(json, schemas.blockUser);
+    if(matched && state.communities[json.community] !== undefined) {
+      if(canEditRole(state, from, json.community, 'mod')) {
+        state.communities[json.community].roles.blocked = state.communities[json.community].roles.blocked.filter(x => x !== json.receiver);
+      }
+    }
+  });
+
   processor.on('cmmts_feature', function(json, from) {
     var state = getState();
 
@@ -237,7 +259,8 @@ function onTransfer(json, prefix, getState, setState, processor) { // The DEX an
           ],
           admin: [],
           mod: [],
-          author: []
+          author: [],
+          blocked: []
         }
       }
 
@@ -360,6 +383,34 @@ function cli(input, getState, prefix) {
     transactor.json(username, key, 'cmmts_unblock_post', {
       permlink: permlink,
       author: author,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_block_user', function(args, transactor, username, key, client, dsteem) {
+    const receiver = args[0];
+    const community = args[1];
+
+    transactor.json(username, key, 'cmmts_block_user', {
+      receiver: receiver,
+      community: community
+    }, function(err, result) {
+      if(err) {
+        console.error(err);
+      }
+    });
+  });
+
+  input.on('communities_unblock_user', function(args, transactor, username, key, client, dsteem) {
+    const receiver = args[0];
+    const community = args[1];
+
+    transactor.json(username, key, 'cmmts_unblock_user', {
+      receiver: receiver,
       community: community
     }, function(err, result) {
       if(err) {

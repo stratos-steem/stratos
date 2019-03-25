@@ -59,7 +59,7 @@ sequelize
   });
 
 const Post = sequelize.define('post', {
-  community: Sequelize.TEXT,
+  community: Sequelize.STRING,
   block: Sequelize.INTEGER,
   fullPermlink: {
     type: Sequelize.TEXT,
@@ -79,7 +79,7 @@ const Post = sequelize.define('post', {
 });
 
 const PinnedPost = sequelize.define('pinnedpost', {
-  community: Sequelize.TEXT,
+  community: Sequelize.STRING,
   fullPermlink: Sequelize.TEXT
 }, {
   indexes: [
@@ -90,7 +90,7 @@ const PinnedPost = sequelize.define('pinnedpost', {
 
 const Community = sequelize.define('community', {
   community: {
-    type: Sequelize.TEXT,
+    type: Sequelize.STRING,
     primaryKey: true
   },
   metadata: Sequelize.TEXT,

@@ -66,6 +66,14 @@ const blockPost = {
   community: community
 }
 
+const blockUser = {
+  type: 'object',
+  receiver: {
+    type: 'string'
+  },
+  community: community
+}
+
 const featurePost = {
   type: 'object',
 
@@ -92,6 +100,7 @@ module.exports = {
   grantRole: grantRole,
   removeRole: removeRole,
   blockPost: blockPost,
+  blockUser: blockUser,
   featurePost: featurePost,
   updateMeta: updateMeta,
   bulkRoleUpdate: bulkRoleUpdate
