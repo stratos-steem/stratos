@@ -132,7 +132,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.blockPost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.block(json.community, json.author, json.permlink);
       }
     }
@@ -143,7 +143,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.blockPost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.unblock(json.community, json.author, json.permlink);
       }
     }
@@ -154,7 +154,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.blockUser);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         state.communities[json.community].roles.blocked.push(json.receiver);
       }
     }
@@ -165,7 +165,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.blockUser);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         state.communities[json.community].roles.blocked = state.communities[json.community].roles.blocked.filter(x => x !== json.receiver);
       }
     }
@@ -176,7 +176,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.featurePost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.feature(json.community, json.author, from, json.permlink);
       }
     }
@@ -187,7 +187,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.featurePost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.unfeature(json.community, json.author, from, json.permlink);
       }
     }
@@ -198,7 +198,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.featurePost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.pin(json.community, json.author, json.permlink);
       }
     }
@@ -209,7 +209,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.featurePost);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'mod')) {
+      if(canEditRole(state, from, json.community, 'author')) {
         database.unpin(json.community, json.author, json.permlink);
       }
     }
@@ -220,7 +220,7 @@ function app(processor, getState, setState, prefix) {
 
     const {matched, errorKey} = matcher.match(json, schemas.updateMeta);
     if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'admin')) {
+      if(canEditRole(state, from, json.community, 'mod')) {
         database.updateMeta(json.community, json.metadata);
       }
     }
