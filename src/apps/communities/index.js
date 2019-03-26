@@ -14,26 +14,30 @@ const communityCreationFeeReceiver = 'shredz7'  // Placeholders for testing
 const communityCreationFee = '1.000 STEEM'
 
 
-function canEditRole(state, user, community, role) { // Roles 'owner', 'admin', 'moderator', 'author'
+function canEditRole(state, user, community, role, isEveryone, isSelf) { // Roles 'owner', 'admin', 'moderator', 'author'. isEveryone is whether the role to add is @eo. isSelf is whether the role to add/remove is the same as the adder/remover.
   try {
     const roles = state.communities[community].roles
 
-    if(roles.owner.indexOf(user) !== -1 || roles.owner.indexOf('eo') !== -1) {  // @eo means everyone.
+    if(roles.owner.indexOf(user) !== -1) {  // @eo means everyone.
       return true;
-    } else if(roles.admin.indexOf(user) !== -1 || roles.admin.indexOf('eo') !== -1) {
-      if(role === 'owner') {
-        return false;
-      } else {
+    } else if(roles.admin.indexOf(user) !== -1) {
+      if(role === 'mod' || role === 'author' || (role === 'admin' && isSelf)) {
         return true;
+      } else {
+        return false;
       }
-    } else if(roles.mod.indexOf(user) !== -1 || roles.mod.indexOf('eo') !== -1) {
-      if(role === 'mod' || role === 'author') {
+    } else if(roles.mod.indexOf(user) !== -1) {
+      if((role === 'author' && !isEveryone) || (role === 'mod' && isSelf)) {    // Moderators can't add or remove @eo from the roles.
         return true;
       } else {
         return false;
       }
     } else if(roles.author.indexOf(user) !== -1){
-      return false;
+      if(role === 'author' && isSelf) {
+        return true;
+      } else {
+        return false;
+      }
     }
   } catch(err) {
     return false;
@@ -53,7 +57,7 @@ function canPost(state, user, community) {
 function editRole(state, updateType, community, from, receiver, role) {
   if(updateType === 'add') {
     // Check authorization
-    if(canEditRole(state, from, community, role)) {
+    if(canEditRole(state, from, community, role, receiver === 'eo', receiver === from)) {
       console.log(from, 'granted role', role, 'to', receiver);
       state.communities[community].roles[role].push(receiver)
     } else {
@@ -61,7 +65,7 @@ function editRole(state, updateType, community, from, receiver, role) {
     }
   } else {
     // Check authorization
-    if(canEditRole(state, from, community, role)) {
+    if(canEditRole(state, from, community, role, receiver === 'eo', receiver === from)) {
       console.log(from, 'removed role', role, 'from', receiver);
       const roleIndex = state.communities[community].roles[role].indexOf(receiver);
       state.communities[community].roles[role].splice(roleIndex, 1);
