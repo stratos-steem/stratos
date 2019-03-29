@@ -1,19 +1,17 @@
-const communityIdAlphabet = 'abcdefghijklmnopqrstuvwxyz-';
+const communityIdAlphabet = '-.abcdefghijklmnopqrstuvwxyz0123456789';
+const communityMinLength = 3;
+const communityMaxLength = 20;
 
-const createCommunity = {
-  type: 'object',
-  id: {
-    type: 'string',
-    alphabet: communityIdAlphabet
-  }
+const community = {
+  type: 'string',
+  alphabet: communityIdAlphabet,
+  minLength: communityMinLength,
+  maxLength: communityMaxLength
 }
 
 const grantRole = {
   type: 'object',
-  community: {
-    type: 'string',
-    alphabet: communityIdAlphabet
-  },
+  community: community,
   receiver: {
     type: 'string'
   },
@@ -24,15 +22,35 @@ const grantRole = {
 
 const removeRole = {
   type: 'object',
-  community: {
-    type: 'string',
-    alphabet: communityIdAlphabet
-  },
+  community: community,
   receiver: {
     type: 'string'
   },
   role: {
     type: 'string'
+  }
+}
+
+const bulkRoleUpdate = {
+  type: 'object',
+
+  community: community,
+  operations: {
+    type: 'array',
+
+    element: {
+      type: 'object',
+
+      updateType: {
+        type: 'string'
+      },
+      receiver: {
+        type: 'string'
+      },
+      role: {
+        type: 'string'
+      }
+    }
   }
 }
 
@@ -45,10 +63,15 @@ const blockPost = {
   author: {
     type: 'string'
   },
-  community: {
-    type: 'string',
-    alphabet: communityIdAlphabet
-  }
+  community: community
+}
+
+const blockUser = {
+  type: 'object',
+  receiver: {
+    type: 'string'
+  },
+  community: community
 }
 
 const featurePost = {
@@ -60,10 +83,7 @@ const featurePost = {
   author: {
     type: 'string'
   },
-  community: {
-    type: 'string',
-    alphabet: communityIdAlphabet
-  }
+  community: community
 }
 
 const updateMeta = {
@@ -72,16 +92,16 @@ const updateMeta = {
   metadata: {
     type: 'string'
   },
-  community: {
-    type: 'string'
-  }
+  community: community
 }
 
 module.exports = {
-  createCommunity: createCommunity,
+  community: community,
   grantRole: grantRole,
   removeRole: removeRole,
   blockPost: blockPost,
+  blockUser: blockUser,
   featurePost: featurePost,
-  updateMeta: updateMeta
+  updateMeta: updateMeta,
+  bulkRoleUpdate: bulkRoleUpdate
 }

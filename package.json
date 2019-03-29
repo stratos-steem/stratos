@@ -23,13 +23,13 @@
     "cors": "^2.8.5",
     "dsteem": "^0.11.2",
     "express": "^4.16.4",
-    "match-schema": "^0.2.0",
+    "match-schema": "^0.3.0",
     "mocha": "^5.2.0",
     "object-hash": "^1.3.1",
     "pg": "^7.8.0",
     "sequelize": "^4.42.0",
     "sqlite3": "^4.0.6",
-    "steem-state": "^1.3.2",
+    "steem-state": "^1.3.5",
     "steem-transact": "^1.0.2"
   }
 }

@@ -59,7 +59,7 @@ sequelize
   });
 
 const Post = sequelize.define('post', {
-  community: Sequelize.TEXT,
+  community: Sequelize.STRING,
   block: Sequelize.INTEGER,
   fullPermlink: {
     type: Sequelize.TEXT,
@@ -67,18 +67,19 @@ const Post = sequelize.define('post', {
   },
   featured: Sequelize.BOOLEAN,
   featurer: Sequelize.STRING,
-  pinned: Sequelize.BOOLEAN
+  pinned: Sequelize.BOOLEAN,
+  blocked: Sequelize.BOOLEAN
 },{
   indexes:[
     {
       unique: false,
-      fields:['block']
+      fields:['block', 'community']
     }
   ]
 });
 
 const PinnedPost = sequelize.define('pinnedpost', {
-  community: Sequelize.TEXT,
+  community: Sequelize.STRING,
   fullPermlink: Sequelize.TEXT
 }, {
   indexes: [
@@ -89,13 +90,13 @@ const PinnedPost = sequelize.define('pinnedpost', {
 
 const Community = sequelize.define('community', {
   community: {
-    type: Sequelize.TEXT,
+    type: Sequelize.STRING,
     primaryKey: true
   },
-  metadata: Sequelize.STRING,
+  metadata: Sequelize.TEXT,
   block: Sequelize.INTEGER,
   posts: Sequelize.INTEGER,
-  dailyposts: Sequelize.INTEGER,
+  weeklyposts: Sequelize.INTEGER,
   weeklyusers: Sequelize.INTEGER
 },{
   indexes:[
@@ -109,7 +110,7 @@ const Community = sequelize.define('community', {
     },
     {
       unique: false,
-      fields:['dailyposts']
+      fields:['weeklyposts']
     },
     {
       unique: false,
@@ -187,24 +188,29 @@ module.exports = {
   },
 
   post: function(community, block, author, permlink) {
-    // Need to make sure post isn't already in DB - this happens sometimes on restarts.
-    Post.destroy({where: { fullPermlink: author + '/' + permlink}}).then(() => {
-      Post.create({
+    Post.findOrCreate({
+      where: {
+        fullPermlink: author + '/' + permlink
+      },
+      defaults: {
         community: community,
         block: block,
         fullPermlink: author + '/' + permlink,
         featured: false,
         featurer: '',
-        pinned: false
-      });
-    });
-
-    Community.findOne({ where: { community: community } }).then((rows) => {
-      Community.update({posts: rows.dataValues.posts+1}, {
-        where: {
-          community: community
-        }
-      });
+        pinned: false,
+        blocked: false
+      }
+    }).then((result) => {
+      if(result[1]) {
+        Community.findOne({ where: { community: community } }).then((rows) => {
+          Community.update({posts: rows.dataValues.posts+1}, {
+            where: {
+              community: community
+            }
+          });
+        });
+      }
     });
   },
 
@@ -212,6 +218,18 @@ module.exports = {
     Post.update({
       featured: true,
       featurer: featurer
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
+  },
+
+  unfeature: function(community, author, featurer, permlink) {
+    Post.update({
+      featured: false,
+      featurer: ''
     }, {
       where: {
         fullPermlink: author + '/' + permlink,
@@ -254,34 +272,42 @@ module.exports = {
     });
   },
 
-  getNew: function(community, limit, callback) {
-    Post.findAll({
-      where: {
-        community: community
-      },
-      order: sequelize.literal('block DESC'),
-      limit: limit
-    }).then(callback);
-  },
-
-  getFeatured: function(community, limit, callback) {
+  getNew: function(community, limit, offset, callback) {
     Post.findAll({
       where: {
         community: community,
-        featured: true
+        pinned: false,
+        blocked: false
       },
       order: sequelize.literal('block DESC'),
-      limit: limit
+      limit: limit,
+      offset: offset
     }).then(callback);
   },
 
-  getPinned: function(community, callback) {
+  getFeatured: function(community, limit, offset, callback) {
+    Post.findAll({
+      where: {
+        community: community,
+        featured: true,
+        pinned: false,
+        blocked: false
+      },
+      order: sequelize.literal('block DESC'),
+      limit: limit,
+      offset: offset
+    }).then(callback);
+  },
+
+  getPinned: function(community, limit, offset, callback) {
     // Workaround found here: https://stackoverflow.com/questions/36164694/sequelize-subquery-in-where-clause
     const tempSQL = sequelize.dialect.QueryGenerator.selectQuery('pinnedposts',{
       attributes: ['fullPermlink'],
       where: {
         community: community
-      }
+      },
+      limit: limit,
+      offset: offset
     }).slice(0,-1); // to remove the ';' from the end of the SQL
 
     Post.findAll( {
@@ -294,10 +320,25 @@ module.exports = {
   },
 
   block: function(community, author, permlink) {
-    Post.destroy({ where: {
-      community: community,
-      fullPermlink: author + '/' + permlink
-    } });
+    Post.update({
+      blocked: true
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
+  },
+
+  unblock: function(community, author, permlink) {
+    Post.update({
+      blocked: false
+    }, {
+      where: {
+        fullPermlink: author + '/' + permlink,
+        community: community
+      }
+    });
   },
 
   create: function(community,block) {
@@ -311,7 +352,7 @@ module.exports = {
         metadata: '{}',
         block: block,
         posts: 0,
-        dailyposts: 0,
+        weeklyposts: 0,
         weeklyusers: 0
       });
     });
@@ -343,73 +384,84 @@ module.exports = {
     }).then(callback);
   },
 
-  getCommunities: function(filter, limit, sort, search, state, callback) {
+  getCommunities: function(filter, limit, offset, sort, search, state, callback) {
     function returnRows(rows) {
+
+      const returnValue = rows;
       for(i in rows) {
-        rows[i].roles = state.communities[rows[i].community].roles;
+        try {
+          returnValue[i].dataValues.roles = state.communities[rows[i].community].roles;
+        } catch(err) {
+        }
       }
-      callback(rows);
+      callback(returnValue);
     }
 
     if(filter === 'date') {
       Community.findAll({
         order: [['block', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
-    } else if(filter === 'dailyposts') {
+    } else if(filter === 'weeklyposts') {
       Community.findAll({
-        order: [['dailyposts', sort]],
-        limit: limit
+        order: [['weeklyposts', sort]],
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else if(filter === 'weeklyusers') {
       Community.findAll({
         order: [['weeklyusers', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else if(filter === 'name') {
       Community.findAll({
-        order: [['posts', sort]],
+        order: [['weeklyposts', sort]],
         where: {
           community: {
             [Sequelize.Op.like]: '%' + search + '%'
           }
         },
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     } else {
       Community.findAll({
         order: [['posts', sort]],
-        limit: limit
+        limit: limit,
+        offset: offset
       }).then(returnRows);
     }
   },
 
-  updateDailyPosts: function(block, getState) {
+  updateWeeklyPosts: function(block, getState) {
     Post.findAll({
       attributes: ['community'],
       where: {
-        block: {[Sequelize.Op.gt]: block-28800}
+        block: {[Sequelize.Op.gt]: block-201600},
+        blocked: false
       }
     }).then((rows) => {
       const state = getState();
 
-      const communityDailyPosts = {};
+      const communityWeeklyPosts = {};
       for(community in state.communities) {
-        communityDailyPosts[community] = 0;
+        communityWeeklyPosts[community] = 0;
       }
 
       for(i in rows) {
-        communityDailyPosts[rows[i].dataValues.community]++;
+        communityWeeklyPosts[rows[i].dataValues.community]++;
       }
 
-      for(community in communityDailyPosts) {
-        Community.update({ dailyposts: communityDailyPosts[community]}, {
+      for(community in communityWeeklyPosts) {
+        Community.update({ weeklyposts: communityWeeklyPosts[community]}, {
           where: {
             community: community
           }
         });
       }
-      console.log('Updated daily posts.')
+      console.log('Updated weekly posts.')
     });
   },
 
@@ -417,7 +469,8 @@ module.exports = {
     Post.findAll({
       attributes: ['community', 'fullPermlink'],
       where: {
-        block: {[Sequelize.Op.gt]: block-201600}
+        block: {[Sequelize.Op.gt]: block-201600},
+        blocked: false
       }
     }).then((rows) => {
       const state = getState();
