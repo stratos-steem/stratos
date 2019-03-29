@@ -21,19 +21,19 @@ function canEditRole(state, user, community, role, isEveryone, isSelf) { // Role
     if(roles.owner.indexOf(user) !== -1) {  // @eo means everyone.
       return true;
     } else if(roles.admin.indexOf(user) !== -1) {
-      if(role === 'mod' || role === 'author' || (role === 'admin' && isSelf)) {
+      if(role === 'mod' || role === 'author' || role === 'blocked' || (role === 'admin' && isSelf)) {
         return true;
       } else {
         return false;
       }
     } else if(roles.mod.indexOf(user) !== -1) {
-      if((role === 'author' && !isEveryone) || (role === 'mod' && isSelf)) {    // Moderators can't add or remove @eo from the roles.
+      if((role === 'author' && !isEveryone) || role === 'blocked' || (role === 'mod' && isSelf)) {    // Moderators can't add or remove @eo from the roles.
         return true;
       } else {
         return false;
       }
     } else if(roles.author.indexOf(user) !== -1){
-      if(role === 'author' && isSelf) {
+      if((role === 'author' && isSelf) || role === 'blocked') {
         return true;
       } else {
         return false;
@@ -81,7 +81,7 @@ function app(processor, getState, setState, prefix) {
   processor.on('cmmts_grant_role', function(json, from) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.grantRole);
-    if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) === -1) {
+    if(matched && state.communities[json.community] !== undefined && (json.role === 'blocked' || json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) === -1) {
       state = editRole(state, 'add', json.community, from, json.receiver, json.role);
     } else {
       console.log('Invalid role grant from', from)
@@ -93,7 +93,7 @@ function app(processor, getState, setState, prefix) {
   processor.on('cmmts_remove_role', function(json, from) {
     var state = getState();
     const {matched, errorKey} = matcher.match(json, schemas.removeRole);
-    if(matched && state.communities[json.community] !== undefined && (json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) > -1) {
+    if(matched && state.communities[json.community] !== undefined && (json.role === 'blocked' || json.role === 'owner' || json.role === 'mod' || json.role === 'admin' || json.role === 'author') && state.communities[json.community].roles[json.role].indexOf(json.receiver) > -1) {
       state = editRole(state, 'remove', json.community, from, json.receiver, json.role);
     } else {
       console.log('Invalid role removal from', from)
@@ -111,11 +111,11 @@ function app(processor, getState, setState, prefix) {
       for(const i in json.operations) {
         const operation = json.operations[i];
         if(operation.updateType === 'add') {
-          if(matched && state.communities[json.community] !== undefined && (operation.role === 'owner' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) === -1) {
+          if(matched && state.communities[json.community] !== undefined && (operation.role === 'blocked' || operation.role === 'owner' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) === -1) {
             state = editRole(state, 'add', json.community, from, operation.receiver, operation.role);
           }
         } else {
-          if(matched && state.communities[json.community] !== undefined && (operation.role === 'owner' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) > -1) {
+          if(matched && state.communities[json.community] !== undefined && (operation.role === 'blocked' || operation.role === 'mod' || operation.role === 'admin' || operation.role === 'author') && state.communities[json.community].roles[operation.role].indexOf(operation.receiver) > -1) {
             state = editRole(state, 'remove', json.community, from, operation.receiver, operation.role);
           }
         }
@@ -145,28 +145,6 @@ function app(processor, getState, setState, prefix) {
     if(matched && state.communities[json.community] !== undefined) {
       if(canEditRole(state, from, json.community, 'author')) {
         database.unblock(json.community, json.author, json.permlink);
-      }
-    }
-  });
-
-  processor.on('cmmts_block_user', function(json, from) {
-    var state = getState();
-
-    const {matched, errorKey} = matcher.match(json, schemas.blockUser);
-    if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'author')) {
-        state.communities[json.community].roles.blocked.push(json.receiver);
-      }
-    }
-  });
-
-  processor.on('cmmts_unblock_user', function(json, from) {
-    var state = getState();
-
-    const {matched, errorKey} = matcher.match(json, schemas.blockUser);
-    if(matched && state.communities[json.community] !== undefined) {
-      if(canEditRole(state, from, json.community, 'author')) {
-        state.communities[json.community].roles.blocked = state.communities[json.community].roles.blocked.filter(x => x !== json.receiver);
       }
     }
   });
@@ -387,34 +365,6 @@ function cli(input, getState, prefix) {
     transactor.json(username, key, 'cmmts_unblock_post', {
       permlink: permlink,
       author: author,
-      community: community
-    }, function(err, result) {
-      if(err) {
-        console.error(err);
-      }
-    });
-  });
-
-  input.on('communities_block_user', function(args, transactor, username, key, client, dsteem) {
-    const receiver = args[0];
-    const community = args[1];
-
-    transactor.json(username, key, 'cmmts_block_user', {
-      receiver: receiver,
-      community: community
-    }, function(err, result) {
-      if(err) {
-        console.error(err);
-      }
-    });
-  });
-
-  input.on('communities_unblock_user', function(args, transactor, username, key, client, dsteem) {
-    const receiver = args[0];
-    const community = args[1];
-
-    transactor.json(username, key, 'cmmts_unblock_user', {
-      receiver: receiver,
       community: community
     }, function(err, result) {
       if(err) {
